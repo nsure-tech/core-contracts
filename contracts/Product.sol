@@ -1,13 +1,16 @@
 pragma solidity ^0.6.0;
 pragma experimental ABIEncoderV2;
 
+import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
+
 contract Product {
-    
-       struct Product {
+        using SafeMath for uint;
+
+    struct Product {
         string productName;
         uint status;
-
         uint totalSale;
+        uint available;
         
     }
 
@@ -30,6 +33,13 @@ contract Product {
         delete _products[_productAddr];
     }
 
+    function updateStatus(address _productAddr,uint _status) public {
+        _products[_productAddr].status = _status;
+    }
+    
+    function addTotalSale(address _productAddr,uint _amount) public {
+        _products[_productAddr].totalSale = _products[_productAddr].totalSale.add(_amount);
+    }
 
 
 }

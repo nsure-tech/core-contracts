@@ -220,6 +220,11 @@
     "@ethersproject/properties" "^5.0.3"
     "@ethersproject/strings" "^5.0.4"
 
+"@openzeppelin/contracts@^3.2.0":
+  version "3.2.0"
+  resolved "https://registry.npm.taobao.org/@openzeppelin/contracts/download/@openzeppelin/contracts-3.2.0.tgz#3e6b3a7662d8ed64271ade96ef42655db983fd9d"
+  integrity sha1-Pms6dmLY7WQnGt6W70JlXbmD/Z0=
+
 "@openzeppelin/truffle-upgrades@^1.2.1":
   version "1.2.2"
   resolved "https://registry.npm.taobao.org/@openzeppelin/truffle-upgrades/download/@openzeppelin/truffle-upgrades-1.2.2.tgz#46d91912d21c68b52aa27140661b46b7551ed46f"

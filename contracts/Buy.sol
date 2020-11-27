@@ -1,25 +1,185 @@
 pragma solidity > 0.6.0;
-contract Buy {
-    
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
+import "@openzeppelin/contracts/utils/EnumerableSet.sol";
+import "@openzeppelin/contracts/math/SafeMath.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "./interface/IProduct.sol";
 
-      function buyInsurance(address _productAddr, uint _amount, uint _blocks, 
-                address payable [] calldata _ipAddrs, uint[] calldata _ipAmount) 
-            external payable whenNotPaused returns (bytes32 _orderId) 
+
+
+
+pragma solidity ^0.6.0;
+
+contract LPTokenWrapper {
+    using SafeMath for uint256;
+    using SafeERC20 for IERC20;
+
+
+    uint256 private _totalSupply;
+    mapping(address => uint256) private _balances;
+
+    function totalSupply() public view returns (uint256) {
+        return _totalSupply;
+    }
+
+    function balanceOf(address account) public view returns (uint256) {
+        return _balances[account];
+    }
+
+    function stake(uint256 amount) public {
+        _totalSupply = _totalSupply.add(amount);
+        _balances[msg.sender] = _balances[msg.sender].add(amount);
+    }
+
+    function withdraw(uint256 amount) public {
+        _totalSupply = _totalSupply.sub(amount);
+        _balances[msg.sender] = _balances[msg.sender].sub(amount);
+    }
+}
+
+contract PoolReward is LPTokenWrapper, IRewardDistributionRecipient {
+    IERC20 public nsure = IERC20(0x41854abd86ab4b76ec440eb7f4eeeba79e6d499417);
+    uint256 public constant DURATION = 7 days;
+
+    uint256 public initreward = 3500*1e18;
+    uint256 public starttime = 1598284800; //08/24/2020 @ 4:00pm (UTC)
+    uint256 public periodFinish = 0;
+    uint256 public rewardRate = 0;
+    uint256 public lastUpdateTime;
+    uint256 public rewardPerTokenStored;
+    mapping(address => uint256) public userRewardPerTokenPaid;
+    mapping(address => uint256) public rewards;
+
+    event RewardAdded(uint256 reward);
+    event Staked(address indexed user, uint256 amount);
+    event Withdrawn(address indexed user, uint256 amount);
+    event RewardPaid(address indexed user, uint256 reward);
+
+    modifier updateReward(address account) {
+        rewardPerTokenStored = rewardPerToken();
+        lastUpdateTime = lastTimeRewardApplicable();
+        if (account != address(0)) {
+            rewards[account] = earned(account);
+            userRewardPerTokenPaid[account] = rewardPerTokenStored;
+        }
+        _;
+    }
+
+    function lastTimeRewardApplicable() public view returns (uint256) {
+        return Math.min(block.timestamp, periodFinish);
+    }
+
+    function rewardPerToken() public view returns (uint256) {
+        if (totalSupply() == 0) {
+            return rewardPerTokenStored;
+        }
+        return
+            rewardPerTokenStored.add(
+                lastTimeRewardApplicable()
+                    .sub(lastUpdateTime)
+                    .mul(rewardRate)
+                    .mul(1e18)
+                    .div(totalSupply())
+            );
+    }
+
+    function earned(address account) public view returns (uint256) {
+        return
+            balanceOf(account)
+                .mul(rewardPerToken().sub(userRewardPerTokenPaid[account]))
+                .div(1e18)
+                .add(rewards[account]);
+    }
+
+    // stake visibility is public as overriding LPTokenWrapper's stake() function
+    function stake(uint256 amount) public updateReward(msg.sender)  checkStart{ 
+        require(amount > 0, "Cannot stake 0");
+        super.stake(amount);
+        emit Staked(msg.sender, amount);
+    }
+
+    function withdraw(uint256 amount) public updateReward(msg.sender)  checkStart{
+        require(amount > 0, "Cannot withdraw 0");
+        super.withdraw(amount);
+        emit Withdrawn(msg.sender, amount);
+    }
+
+    function exit() external {
+        withdraw(balanceOf(msg.sender));
+        getReward();
+    }
+
+    function getReward() public updateReward(msg.sender)  checkStart{
+        uint256 reward = earned(msg.sender);
+        if (reward > 0) {
+            rewards[msg.sender] = 0;
+            jfi.safeTransfer(msg.sender, reward);
+            emit RewardPaid(msg.sender, reward);
+        }
+    }
+
+
+    modifier checkStart(){
+        require(block.timestamp > starttime,"not start");
+        _;
+    }
+
+    function notifyRewardAmount(uint256 reward)
+        external
+        onlyRewardDistribution
+        updateReward(address(0))
     {
-        require(_ipAddrs.length <= 3, "_ipAddrs.length is too long..");
-        require(_ipAddrs.length == _ipAmount.length, "_ipAddrs and _ipAmount need to correspond");
+        if (block.timestamp >= periodFinish) {
+            rewardRate = reward.div(DURATION);
+        } else {
+            uint256 remaining = periodFinish.sub(block.timestamp);
+            uint256 leftover = remaining.mul(rewardRate);
+            rewardRate = reward.add(leftover).div(DURATION);
+        }
+        jfi.mint(address(this),reward);
+        lastUpdateTime = block.timestamp;
+        periodFinish = block.timestamp.add(DURATION);
+        emit RewardAdded(reward);
+    }
+}
 
-        Product storage _productInfo = _products[_productAddr];
+
+contract Buy is PoolReward {
+    
+    IProduct public _product;
+      uint public orderIndex          = 1000;
+      uint public rate = 500;
+      mapping (uint => Order) public insuranceOrders;
+
+    struct Order {
+        address payable buyer;
+
+        uint premium;
+        uint price;
+        uint settleBlockNumber; //
+
+        uint8 totalProviders;
+        uint8 state;
+
+    }
+
+
+      function buyInsuranceWithETH(address _productAddr, uint _amount, uint _blocks) 
+            external payable whenNotPaused
+    {
+   
+        Product memory _productInfo = _products.getProduct(_productAddr);
         require(_productInfo.status == 1, "this product is disabled!");
 
         // Initialize order data
-        _orderId        = _buildOrderId(_productAddr, _amount, _blocks);
 
-        uint premium    = _calculatePremium(_amount, _blocks, _productInfo.feeRate);
+        uint premium    = _calculatePremium(_amount, _blocks, _productInfo.feeRate); //计算保费 ，中心化 
         require(premium == msg.value, "premium and msg.value is not the same");
 
-        Order storage _order = insuranceOrders[_orderId];
-        require(_order.buyer == address(0), "order id is not empty?!");
+        Order storage _order = insuranceOrders[orderIndex];
+        orderIndex++;
+        // require(_order.buyer == address(0), "order id is not empty?!");
 
         _order.buyer    = _msgSender();
         _order.premium  = premium;
@@ -27,49 +187,50 @@ contract Buy {
         _order.state    = 0;
         _order.settleBlockNumber = _blocks.add(block.number);
 
-        _doBuyInsurance(_order, _productInfo, _ipAddrs, _ipAmount);
+        //update product 
+        //todo
+        
+        //staking pool 
+        stake(msg.value.mul(rate));
+        
 
         emit NewOrder(_orderId, _order.buyer, _productAddr, _order.premium, _order.price, _order.settleBlockNumber);
     }
 
-    function _doBuyInsurance(Order storage _order, Product storage _productInfo, 
-                             address payable [] memory _ipAddrs, uint[] memory _ipAmount)
-        internal returns (bool) 
-    { 
-        uint _totalAmount       = 0;
-        uint _totalIpPremium    = 0;
-        for (uint8 i = 0; i < _ipAddrs.length; i++) {
-            require(_ipAmount[i] > 0, "_ipAmount is zero");
 
-            InsuranceProvider storage _currProvider = ethPool.ips[_ipAddrs[i]];
-            require(_currProvider.avail >= _ipAmount[i], "Insurance provider avail balance not enough");
+      function buyInsuranceWithStable(address _productAddr, uint _amount, uint _blocks,address _token) 
+            external payable whenNotPaused  
+    {
+   
+        Product memory _productInfo = _products.getProduct(_productAddr);
+        require(_productInfo.status == 1, "this product is disabled!");
 
-            uint ipPremium = _updateBuyInsuranceIP(_currProvider, _ipAddrs[i], _ipAmount[i], _order.price, _order.premium);
-            
-            _totalIpPremium = _totalIpPremium.add(ipPremium);
-            _totalAmount = _totalAmount.add(_ipAmount[i]);
+        // Initialize order data
 
-            // Set order details
-            _order.orderDetails[i] = OrderDetail(_ipAddrs[i], _ipAmount[i]);
-            _order.totalProviders = _order.totalProviders + 1;
-        }
+        uint premium    = _calculatePremium(_amount, _blocks, _productInfo.feeRate); //计算保费 ，中心化 
+        require(premium == msg.value, "premium and msg.value is not the same");
 
-        require(_totalAmount == _order.price, "The calldata amount is inconsistent with the order amount");
-        //分配保费
-        _distributeOtherPremium(_order.premium, _totalIpPremium);
+        Order storage _order = insuranceOrders[orderIndex];
+        orderIndex++;
+        // require(_order.buyer == address(0), "order id is not empty?!");
 
-        // Update pool avail and locked
-        ethPool.avail = ethPool.avail.sub(_totalAmount);
-        ethPool.locked = ethPool.locked.add(_totalAmount);
+        _order.buyer    = _msgSender();
+        _order.premium  = premium;
+        _order.price    = _amount;
+        _order.state    = 0;
+        _order.settleBlockNumber = _blocks.add(block.number);
 
-        // Update product totalPremium and totalSale
-        _productInfo.totalPremium = _productInfo.totalPremium.add(_order.premium);
-        _productInfo.totalSale = _productInfo.totalSale.add(_totalAmount);
-
-        // should be premium to do mine param, because some one can let amount bigger, and blocks less
-        getMine().takerMining(_order.premium, _msgSender());
-
-        return true;
+        //update product 
+        //todo
+        
+        //staking pool 
+       
+        IERC20(_token).safeTransferFrom(msg.sender,address(this),_amount);
+        stake(_amount);
+        emit NewOrder(_orderId, _order.buyer, _productAddr, _order.premium, _order.price, _order.settleBlockNumber);
     }
+
+   
+
     
 }
