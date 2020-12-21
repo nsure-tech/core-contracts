@@ -9,14 +9,15 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/GSN/Context.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/EnumerableSet.sol";
-import "./library/Roles.sol"
+import "./library/Roles.sol";
 
 interface Nsure is IERC20 {
    function mint(address _to, uint256 _amount) external  returns (bool);
 }
 
 
-contract CapitalStake is WhitelistRole {
+
+contract CapitalStake {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
@@ -38,8 +39,6 @@ contract CapitalStake is WhitelistRole {
     }
 
     Nsure public nsure;
-    // Dev address.
-    address public devaddr;
     // Block number when bonus SUSHI period ends.
     uint256 public bonusEndBlock;
     // SUSHI tokens created per block.
@@ -48,7 +47,7 @@ contract CapitalStake is WhitelistRole {
     uint256 public constant BONUS_MULTIPLIER = 10;
     // The migrator contract. It has a lot of power. Can only be set through governance (owner).
 
-    uint256 public pendingDuration = 60 days;
+    uint256 public pendingDuration = 10 minutes;
     //外加的
      uint256 public totalWeight;
     mapping(address => uint256) public userWeight;
@@ -61,25 +60,24 @@ contract CapitalStake is WhitelistRole {
     // The block number when SUSHI mining starts.
     uint256 public startBlock;
 
+    address public devaddr = 0x666747ffD8417a735dFf70264FDf4e29076c775a;
     event Deposit(address indexed user, uint256 indexed pid, uint256 amount);
     event Withdraw(address indexed user, uint256 indexed pid, uint256 amount);
     event EmergencyWithdraw(address indexed user, uint256 indexed pid, uint256 amount);
 
-    constructor(
-        Nsure _nsure,
-        address _devaddr,
-        uint256 _nsurePerBlock,
-        uint256 _startBlock,
-        uint256 _bonusEndBlock
-    ) public {
-        nsure = _nsure;
-        devaddr = _devaddr;
-        nsurePerBlock = _nsurePerBlock;
-        bonusEndBlock = _bonusEndBlock;
-        startBlock = _startBlock;
+    constructor() public {
+        //      Nsure _nsure,
+        // address _devaddr,
+        // uint256 _nsurePerBlock,
+        // uint256 _startBlock,
+        // uint256 _bonusEndBlock
+        nsure =Nsure(0x904E8869a420fE73Ef089926fB8624cC6abd37F7);
+        nsurePerBlock = 10;
+        bonusEndBlock = block.number;
+        startBlock = block.number;
     }
     
-    function setWeight(address _account,uint256 _weight , bool _add )  onlyWhitelist  external {
+    function setWeight(address _account,uint256 _weight , bool _add )    external {
         if(_add){
             totalWeight = totalWeight.add(_weight);
             userWeight[_account] =  userWeight[_account].add(_weight);
@@ -96,7 +94,7 @@ contract CapitalStake is WhitelistRole {
 
     // Add a new lp to the pool. Can only be called by the owner.
     // XXX DO NOT add the same LP token more than once. Rewards will be messed up if you do.
-    function add(uint256 _allocPoint, IERC20 _lpToken, bool _withUpdate) public onlyOwner {
+    function add(uint256 _allocPoint, IERC20 _lpToken, bool _withUpdate) public {
         if (_withUpdate) {
             massUpdatePools();
         }
@@ -110,7 +108,7 @@ contract CapitalStake is WhitelistRole {
         }));
     }
 
-    function set(uint256 _pid, uint256 _allocPoint, bool _withUpdate) public onlyOwner {
+    function set(uint256 _pid, uint256 _allocPoint, bool _withUpdate) public  {
         if (_withUpdate) {
             massUpdatePools();
         }
@@ -177,7 +175,7 @@ contract CapitalStake is WhitelistRole {
         updatePool(_pid);
         if (user.amount > 0) {
             uint256 pending = user.amount.add(userWeight[msg.sender]).mul(pool.accNsurePerShare).div(1e12).sub(user.rewardDebt);
-            safeNsureTransfer(msg.sender, pending);
+            // safeNsureTransfer(msg.sender, pending);
         }
         pool.lpToken.safeTransferFrom(address(msg.sender), address(this), _amount);
         user.amount = user.amount.add(_amount);
@@ -227,9 +225,5 @@ contract CapitalStake is WhitelistRole {
         }
     }
 
-    // Update dev address by the previous dev.
-    function dev(address _devaddr) public {
-        require(msg.sender == devaddr, "dev: wut?");
-        devaddr = _devaddr;
-    }
+ 
 }

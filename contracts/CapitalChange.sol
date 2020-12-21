@@ -7,14 +7,14 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/GSN/Context.sol";
 
 
-contract CapitalChange is ERC20("token","tok"), Ownable {
+contract CapitalChange is ERC20("nETH","nETH"), Ownable {
     using SafeMath  for uint;
  
     bytes4 private constant SELECTOR = bytes4(keccak256(bytes('transfer(address,uint256)')));
 
 
     receive() external payable  {
-        stake();
+        convert();
     }
     
     function calc(uint _value) internal view returns (uint) {
@@ -24,7 +24,7 @@ contract CapitalChange is ERC20("token","tok"), Ownable {
         return totalSupply().mul(_value).div(address(this).balance);
     }
     
-    function stake() public payable    { 
+    function convert() public payable    { 
         require(msg.value > 0, "Cannot stake 0");
         uint value = calc(msg.value);
        _mint(msg.sender,value);
