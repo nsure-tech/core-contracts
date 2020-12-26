@@ -20,9 +20,8 @@ contract Surplus is Ownable {
         IERC20(_token).transfer(msg.sender,_amount);
     }
  
-    receive() external payable {
+    receive() external payable {}
 
-    }
 
 
 }

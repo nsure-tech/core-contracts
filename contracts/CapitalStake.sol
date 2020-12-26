@@ -15,8 +15,6 @@ interface Nsure is IERC20 {
    function mint(address _to, uint256 _amount) external  returns (bool);
 }
 
-
-
 contract CapitalStake {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
@@ -25,6 +23,7 @@ contract CapitalStake {
     struct UserInfo {
         uint256 amount;     // How many LP tokens the user has provided.
         uint256 rewardDebt; // Reward debt. See explanation below.
+        uint256 reward;
 
         uint256 pendingWithdrawal;          // payments available for withdrawal by an investor
         uint256 pendingAt; 
@@ -32,25 +31,27 @@ contract CapitalStake {
 
     // Info of each pool.
     struct PoolInfo {
+        uint256 amount;             //Total Deposit of Lp token
         IERC20 lpToken;           // Address of LP token contract.
         uint256 allocPoint;       // How many allocation points assigned to this pool. SUSHIs to distribute per block.
         uint256 lastRewardBlock;  // Last block number that SUSHIs distribution occurs.
-        uint256 accNsurePerShare; // Accumulated SUSHIs per share, times 1e12. See below.
+        uint256 accNsurePerShare; //total 
     }
 
     Nsure public nsure;
     // Block number when bonus SUSHI period ends.
-    uint256 public bonusEndBlock;
+    // uint256 public bonusEndBlock;
     // SUSHI tokens created per block.
     uint256 public nsurePerBlock;
     // Bonus muliplier for early sushi makers.
-    uint256 public constant BONUS_MULTIPLIER = 10;
-    // The migrator contract. It has a lot of power. Can only be set through governance (owner).
+    // uint256 public constant BONUS_MULTIPLIER = 10;
+    // // The migrator contract. It has a lot of power. Can only be set through governance (owner).
 
     uint256 public pendingDuration = 10 minutes;
-    //外加的
-     uint256 public totalWeight;
-    mapping(address => uint256) public userWeight;
+    //total weigth of each pool
+    mapping(uint => uint) public totalWeight;
+    //user's weight of each pool
+    mapping(uint => mapping(address => uint)) public userWeight;
     // Info of each pool.
     PoolInfo[] public poolInfo;
     // Info of each user that stakes LP tokens.
@@ -61,30 +62,29 @@ contract CapitalStake {
     uint256 public startBlock;
 
     address public devaddr = 0x666747ffD8417a735dFf70264FDf4e29076c775a;
-    event Deposit(address indexed user, uint256 indexed pid, uint256 amount);
-    event Withdraw(address indexed user, uint256 indexed pid, uint256 amount);
-    event EmergencyWithdraw(address indexed user, uint256 indexed pid, uint256 amount);
+   
 
-    constructor() public {
+    constructor(address _nsure) public {
         //      Nsure _nsure,
         // address _devaddr,
         // uint256 _nsurePerBlock,
         // uint256 _startBlock,
         // uint256 _bonusEndBlock
-        nsure =Nsure(0x904E8869a420fE73Ef089926fB8624cC6abd37F7);
+        nsure =Nsure(_nsure);
         nsurePerBlock = 10;
-        bonusEndBlock = block.number;
+        // bonusEndBlock = block.number;
         startBlock = block.number;
     }
     
-    function setWeight(address _account,uint256 _weight , bool _add )    external {
+    //add or sub weight
+    function setWeight(uint _pid,address _account,uint256 _weight , bool _add )    external {
         if(_add){
-            totalWeight = totalWeight.add(_weight);
-            userWeight[_account] =  userWeight[_account].add(_weight);
+            totalWeight[_pid] = totalWeight[_pid].add(_weight);
+            userWeight[_pid][_account] =  userWeight[_pid][_account].add(_weight);
         }else {
-            require(userWeight[_account] >= _weight , "insufficient");
-            totalWeight = totalWeight.sub(_weight);
-            userWeight[_account] =  userWeight[_account].sub(_weight);
+            require(userWeight[_pid][_account] >= _weight , "insufficient");
+            totalWeight[_pid] = totalWeight[_pid].sub(_weight);
+            userWeight[_pid][_account] =  userWeight[_pid][_account].sub(_weight);
         }
     }
 
@@ -101,6 +101,7 @@ contract CapitalStake {
         uint256 lastRewardBlock = block.number > startBlock ? block.number : startBlock;
         totalAllocPoint = totalAllocPoint.add(_allocPoint);
         poolInfo.push(PoolInfo({
+            amount:0,
             lpToken: _lpToken,
             allocPoint: _allocPoint,
             lastRewardBlock: lastRewardBlock,
@@ -120,28 +121,30 @@ contract CapitalStake {
 
     // Return reward multiplier over the given _from to _to block.
     function getMultiplier(uint256 _from, uint256 _to) public view returns (uint256) {
-        if (_to <= bonusEndBlock) {
-            return _to.sub(_from).mul(BONUS_MULTIPLIER);
-        } else if (_from >= bonusEndBlock) {
-            return _to.sub(_from);
-        } else {
-            return bonusEndBlock.sub(_from).mul(BONUS_MULTIPLIER).add(
-                _to.sub(bonusEndBlock)
-            );
-        }
+        // if (_to <= bonusEndBlock) {
+        //     return _to.sub(_from).mul(BONUS_MULTIPLIER);
+        // } else if (_from >= bonusEndBlock) {
+        //     return _to.sub(_from);
+        // } else {
+        //     return bonusEndBlock.sub(_from).mul(BONUS_MULTIPLIER).add(
+        //         _to.sub(bonusEndBlock)
+        //     );
+        // }
+        return _to.sub(_from);
     }
 
     function pendingNsure(uint256 _pid, address _user) external view returns (uint256) {
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][_user];
         uint256 accNsurePerShare = pool.accNsurePerShare;
-        uint256 lpSupply = pool.lpToken.balanceOf(address(this)).add(totalWeight);
+        uint256 lpSupply = pool.lpToken.balanceOf(address(this)).add(totalWeight[_pid]);
         if (block.number > pool.lastRewardBlock && lpSupply != 0) {
             uint256 multiplier = getMultiplier(pool.lastRewardBlock, block.number);
             uint256 nsureReward = multiplier.mul(nsurePerBlock).mul(pool.allocPoint).div(totalAllocPoint);
             accNsurePerShare = accNsurePerShare.add(nsureReward.mul(1e12).div(lpSupply));
         }
-        return user.amount.add(userWeight[_user]).mul(accNsurePerShare).div(1e12).sub(user.rewardDebt);
+        uint weight = userWeight[_pid][_user];
+        return user.amount.add(weight).mul(accNsurePerShare).div(1e12).sub(user.rewardDebt).add(user.reward);
     }
 
     function massUpdatePools() public {
@@ -156,7 +159,7 @@ contract CapitalStake {
         if (block.number <= pool.lastRewardBlock) {
             return;
         }
-        uint256 lpSupply = pool.lpToken.balanceOf(address(this)).add(totalWeight);
+        uint256 lpSupply = pool.lpToken.balanceOf(address(this)).add(totalWeight[_pid]);
         if (lpSupply == 0) {
             pool.lastRewardBlock = block.number;
             return;
@@ -173,38 +176,52 @@ contract CapitalStake {
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][msg.sender];
         updatePool(_pid);
-        if (user.amount > 0) {
-            uint256 pending = user.amount.add(userWeight[msg.sender]).mul(pool.accNsurePerShare).div(1e12).sub(user.rewardDebt);
+        if (user.amount.add(userWeight[_pid][msg.sender]) > 0) {
+            user.reward = user.amount.add(userWeight[_pid][msg.sender]).mul(pool.accNsurePerShare).div(1e12).sub(user.rewardDebt).add(user.reward);
             // safeNsureTransfer(msg.sender, pending);
         }
         pool.lpToken.safeTransferFrom(address(msg.sender), address(this), _amount);
         user.amount = user.amount.add(_amount);
-        user.rewardDebt = user.amount.add(userWeight[msg.sender]).mul(pool.accNsurePerShare).div(1e12);
+        user.rewardDebt = user.amount.add(userWeight[_pid][msg.sender]).mul(pool.accNsurePerShare).div(1e12);
+        pool.amount = pool.amount.add(_amount);
         emit Deposit(msg.sender, _pid, _amount);
     }
 
-  function withdraw(uint256 _pid, uint256 _amount) public {
+//pending
+  function unstake(uint256 _pid,uint256 _amount) public {
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][msg.sender];
         require(user.amount.sub(user.pendingWithdrawal) >= _amount, "withdraw: not good");
         user.pendingWithdrawal = user.pendingWithdrawal.add(_amount);
         user.pendingAt = block.timestamp;
-    
+        emit Unstake(msg.sender,_pid,_amount);
     }
     
-    function doWithdraw(uint256 _pid, uint256 _amount) public {
+    function withdraw(uint256 _pid, uint256 _amount) public {
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][msg.sender];
         require(user.pendingWithdrawal >= _amount, "withdraw: not good");
         require(block.timestamp >= user.pendingAt.add(pendingDuration) ,"pending");
         updatePool(_pid);
-        uint256 pending = user.amount.add(userWeight[msg.sender]).mul(pool.accNsurePerShare).div(1e12).sub(user.rewardDebt);
-        safeNsureTransfer(msg.sender, pending);
+        user.reward = user.amount.add(userWeight[_pid][msg.sender]).mul(pool.accNsurePerShare).div(1e12).sub(user.rewardDebt).add(user.reward);
+        // safeNsureTransfer(msg.sender, pending); //奖励先不取
         user.amount = user.amount.sub(_amount);
-        user.rewardDebt = user.amount.add(userWeight[msg.sender]).mul(pool.accNsurePerShare).div(1e12);
+        user.rewardDebt = user.amount.add(userWeight[_pid][msg.sender]).mul(pool.accNsurePerShare).div(1e12);
         user.pendingWithdrawal = user.pendingWithdrawal.sub(_amount);
         pool.lpToken.safeTransfer(address(msg.sender), _amount);
+        pool.amount = pool.amount.sub(_amount);
         emit Withdraw(msg.sender, _pid, _amount);
+    }
+//claim reward
+    function claim(uint256 _pid) external {
+        PoolInfo storage pool = poolInfo[_pid];
+        UserInfo storage user = userInfo[_pid][msg.sender];
+        updatePool(_pid);
+        uint reward =  user.amount.add(userWeight[_pid][msg.sender]).mul(pool.accNsurePerShare).div(1e12).sub(user.rewardDebt).add(user.reward);
+        user.rewardDebt = user.amount.add(userWeight[_pid][msg.sender]).mul(pool.accNsurePerShare).div(1e12);
+        user.reward = 0;
+        safeNsureTransfer(msg.sender, reward); 
+        emit Claim(msg.sender,_pid,reward);
     }
 
     function emergencyWithdraw(uint256 _pid) public {
@@ -214,6 +231,11 @@ contract CapitalStake {
         emit EmergencyWithdraw(msg.sender, _pid, user.amount);
         user.amount = 0;
         user.rewardDebt = 0;
+        user.reward = 0;
+        if(userWeight[_pid][msg.sender] >0){
+            totalWeight[_pid] = totalWeight[_pid].sub(userWeight[_pid][msg.sender]);
+            userWeight[_pid][msg.sender] = 0;
+        }
     }
 
     function safeNsureTransfer(address _to, uint256 _amount) internal {
@@ -224,6 +246,11 @@ contract CapitalStake {
             nsure.transfer(_to, _amount);
         }
     }
-
+    
+    event Claim(address indexed user,uint256 pid,uint256 amount);
+    event Deposit(address indexed user, uint256 indexed pid, uint256 amount);
+    event Withdraw(address indexed user, uint256 indexed pid, uint256 amount);
+    event EmergencyWithdraw(address indexed user, uint256 indexed pid, uint256 amount);
+    event Unstake(address indexed user,uint256 pid, uint256 amount);
  
 }

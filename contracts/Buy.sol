@@ -1,9 +1,10 @@
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/cryptography/MerkleProof.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
+import "./interfaces/ICover.sol";
 
 pragma solidity >=0.6.0;
+pragma experimental ABIEncoderV2;
 
 contract Buy is Ownable {
     using SafeMath for uint256;
@@ -11,9 +12,10 @@ contract Buy is Ownable {
     string public constant name = "Buy";
     string public version = "1";
 
-    address public stakingPool = 0x666747ffD8417a735dFf70264FDf4e29076c775a;
-    address public surplus = 0x666747ffD8417a735dFf70264FDf4e29076c775a;
-    address public token = 0x666747ffD8417a735dFf70264FDf4e29076c775a;
+    address public stakingPool;
+    address public surplus;
+    address public token;
+    ICover public _product ;
     /// @notice A record of states for signing / validating signatures
     mapping(address => uint256) public nonces;
 
@@ -23,16 +25,19 @@ contract Buy is Ownable {
     mapping(uint256 => Order) public insuranceOrders;
 
     event NewOrder(
-        address indexed buyer,
-        uint256 currency,
-        address indexed product,
-        uint256 amount,
-        uint256 cost,
-        uint256 period,
-        uint256 createAt
+        // address indexed buyer,
+        // uint256 currency
+        // // address indexed product,
+        // // uint256 amount,
+        // // uint256 cost,
+        // // uint256 period
+        // // uint256 createAt
+        Order
     );
     struct Order {
         address payable buyer;
+        address product;
+        uint256 currency;
         uint256 premium;
         uint256 amount;
         uint256 period;
@@ -40,6 +45,11 @@ contract Buy is Ownable {
         uint8 state;
     }
 
+constructor(address _stake,address _surplus,address _cover)public {
+    stakingPool = _stake;
+    surplus = _surplus;
+    _product = ICover(_cover);
+}
     /// @notice The EIP-712 typehash for the contract's domain
     bytes32 public constant DOMAIN_TYPEHASH =
         keccak256(
@@ -70,8 +80,9 @@ contract Buy is Ownable {
         bytes32 s,
         uint256 deadline
     ) external payable {
-        // Product memory _productInfo = _products.getProduct(_productAddr);
-        // require(_productInfo.status == 1, "this product is disabled!");
+        ICover.Product memory _productInfo = _product.getProduct(_productAddr);
+        require(_productInfo.status == 1, "this product is disabled!");
+        require(_product.getAvailale() >= _amount,"not enough");
 
         // Initialize order data
 
@@ -112,7 +123,9 @@ contract Buy is Ownable {
         orderIndex++;
         // require(_order.buyer == address(0), "order id is not empty?!");
 
-        // _order.buyer    = _msgSender();
+        _order.buyer    = _msgSender();
+        _order.currency =1;
+        _order.product = _productAddr;
         _order.premium = _cost;
         _order.amount = _amount;
         _order.createAt = block.timestamp;
@@ -120,20 +133,21 @@ contract Buy is Ownable {
         _order.state = 0;
 
         //update product
-        // _product.sub(_productAddr,amount)
+        _product.subAvailable(_amount);
 
         //transfer eth to staking Pool and Surplus
         payable(stakingPool).transfer(msg.value.mul(40).div(100));
         payable(surplus).transfer(msg.value.mul(10).div(100));
 
         emit NewOrder(
-            msg.sender,
-            1,
-            _productAddr,
-            _amount,
-            _cost,
-            period,
-            block.timestamp
+            _order
+            // msg.sender,
+            // 1
+            // _productAddr,
+            // _amount,
+            // _cost,
+            // period
+            // block.timestamp
         );
     }
 

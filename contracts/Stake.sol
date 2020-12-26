@@ -22,8 +22,8 @@ contract Stake {
       /// @notice A record of states for signing / validating signatures
     mapping (address => uint) public nonces;
 
-    ERC20 public Nsure = ERC20(0x904E8869a420fE73Ef089926fB8624cC6abd37F7);
-    ERC20 public USDT = ERC20(0x904E8869a420fE73Ef089926fB8624cC6abd37F7);
+    ERC20 public Nsure;
+    ERC20 public USDT;
     uint256 private _totalSupply;
     mapping(address => uint256) private _balances;
 
@@ -38,17 +38,17 @@ contract Stake {
 
  
     /// @notice The EIP-712 typehash for the permit struct used by the contract
-    bytes32 public constant UNSTAKE_TYPEHASH = keccak256("Unstake(address account,uint256 amount,uint256 nonce,uint256 deadline)");
-
- 
-    /// @notice The EIP-712 typehash for the permit struct used by the contract
     bytes32 public constant CLAIM_TYPEHASH = keccak256("Claim(address account,uint256 currency,uint256 amount,uint256 nonce,uint256 deadline)");
 
 
     /// @notice The EIP-712 typehash for the permit struct used by the contract
     bytes32 public constant WITHDRAW_TYPEHASH = keccak256("Withdraw(address account,uint256 amount,uint256 nonce,uint256 deadline)");
 
- 
+    constructor(address _nsure,address _usdt)public {
+        Nsure = ERC20(_nsure);
+        USDT = ERC20(_usdt); //not available
+    }
+
     function totalSupply() public view returns (uint256) {
         return _totalSupply;
     }
@@ -74,21 +74,11 @@ contract Stake {
         require(signatory != address(0), "invalid signature");
         require(signatory == signAdmin, "unauthorized");
         require(block.timestamp <= deadline, "signature expired");
-        // Nsure.safeTransfer(msg.sender,_amount);
+        Nsure.safeTransfer(msg.sender,_amount);
         emit Withdraw(msg.sender,_amount);
     }
 
-    function unstake(uint _amount,uint deadline,uint8 v, bytes32 r, bytes32 s) external{
-        bytes32 domainSeparator = keccak256(abi.encode(DOMAIN_TYPEHASH, keccak256(bytes(name)),keccak256(bytes(version)), getChainId(), address(this)));
-        bytes32 structHash = keccak256(abi.encode(UNSTAKE_TYPEHASH,address(msg.sender), _amount,nonces[msg.sender]++, deadline));
-        bytes32 digest = keccak256(abi.encodePacked("\x19\x01", domainSeparator, structHash));
-        address signatory = ecrecover(digest, v, r, s);
-        require(signatory != address(0), "invalid signature");
-        require(signatory == signAdmin, "unauthorized");
-        require(block.timestamp <= deadline, "signature expired");
-        // Nsure.safeTransfer(msg.sender,_amount);
-        emit Unstake(msg.sender,_amount);
-    }
+
 
     function claim(uint _amount,uint currency,uint deadline,uint8 v, bytes32 r, bytes32 s) external {
         bytes32 domainSeparator = keccak256(abi.encode(DOMAIN_TYPEHASH, keccak256(bytes(name)),keccak256(bytes(version)), getChainId(), address(this)));
@@ -99,7 +89,7 @@ contract Stake {
         require(signatory == signAdmin, "unauthorized");
         require(block.timestamp <= deadline, "signature expired");
         if(currency ==1){
-            // msg.sender.transfer(_amount);
+            msg.sender.transfer(_amount);
         }else{
             // USDT.safeTransfer(msg.sender,_amount);
         }
