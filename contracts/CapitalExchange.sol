@@ -15,15 +15,15 @@ contract CapitalExchange is ERC20("nETH","nETH"), Ownable {
     
     function ratio(uint _value) internal view returns (uint) {
         if(totalSupply() == 0){
-          return 1;
+          return 1e18;
         }
-        return  totalSupply().div(address(this).balance.sub(_value));
+        return  totalSupply().mul(1e18).div(address(this).balance.sub(_value));
     }
     
 
     function convert() public payable    { 
         require(msg.value > 0, "Cannot stake 0");
-        uint value = msg.value.mul(ratio(msg.value));
+        uint value = msg.value.mul(ratio(msg.value)).div(1e18);
         _mint(msg.sender,value);
         emit Mint(msg.sender, value);
     }

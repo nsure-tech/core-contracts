@@ -103,5 +103,7 @@ contract Stake {
         assembly { chainId := chainid() }
         return chainId;
     }
+
+    receive() external payable {}
    
 }

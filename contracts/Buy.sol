@@ -22,16 +22,11 @@ contract Buy is Ownable {
     // IProduct public _product;
     uint256 public orderIndex = 1000;
     uint256 public rate = 500;
+    uint256 public surplueRate = 10;
+    uint256 public stakeRate = 40;
     mapping(uint256 => Order) public insuranceOrders;
 
     event NewOrder(
-        // address indexed buyer,
-        // uint256 currency
-        // // address indexed product,
-        // // uint256 amount,
-        // // uint256 cost,
-        // // uint256 period
-        // // uint256 createAt
         Order
     );
     struct Order {
@@ -70,6 +65,13 @@ constructor(address _stake,address _surplus,address _cover)public {
         surplus = _addr;
     }
 
+    function setSurplusRate(uint _rate) external {
+        surplueRate = _rate;
+    }
+
+    function setStakeRate(uint _rate) external {
+        stakeRate = _rate;
+    }
     function buyInsuranceWithETH(
         address _productAddr,
         uint256 _amount,
@@ -80,8 +82,9 @@ constructor(address _stake,address _surplus,address _cover)public {
         bytes32 s,
         uint256 deadline
     ) external payable {
-        ICover.Product memory _productInfo = _product.getProduct(_productAddr);
-        require(_productInfo.status == 1, "this product is disabled!");
+        require(msg.value == _cost,"not eq");
+        // ICover.Product memory _productInfo = _product.getProduct(_productAddr);
+        // require(_productInfo.status == 1, "this product is disabled!");
         require(_product.getAvailale() >= _amount,"not enough");
 
         // Initialize order data
@@ -121,7 +124,6 @@ constructor(address _stake,address _surplus,address _cover)public {
 
         Order storage _order = insuranceOrders[orderIndex];
         orderIndex++;
-        // require(_order.buyer == address(0), "order id is not empty?!");
 
         _order.buyer    = _msgSender();
         _order.currency =1;
@@ -132,22 +134,15 @@ constructor(address _stake,address _surplus,address _cover)public {
         _order.period = period;
         _order.state = 0;
 
-        //update product
-        _product.subAvailable(_amount);
+        // //update product
+        // _product.subAvailable(_amount);
 
-        //transfer eth to staking Pool and Surplus
-        payable(stakingPool).transfer(msg.value.mul(40).div(100));
-        payable(surplus).transfer(msg.value.mul(10).div(100));
+        // //transfer eth to staking Pool and Surplus
+        payable(stakingPool).transfer(msg.value.mul(stakeRate).div(100));
+        payable(surplus).transfer(msg.value.mul(surplueRate).div(100));
 
         emit NewOrder(
             _order
-            // msg.sender,
-            // 1
-            // _productAddr,
-            // _amount,
-            // _cost,
-            // period
-            // block.timestamp
         );
     }
 

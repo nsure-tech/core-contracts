@@ -10,6 +10,7 @@ import "@openzeppelin/contracts/GSN/Context.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/EnumerableSet.sol";
 import "./library/Roles.sol";
+import "./interfaces/ICover.sol";
 
 interface Nsure is IERC20 {
    function mint(address _to, uint256 _amount) external  returns (bool);
@@ -33,20 +34,17 @@ contract CapitalStake {
     struct PoolInfo {
         uint256 amount;             //Total Deposit of Lp token
         IERC20 lpToken;           // Address of LP token contract.
-        uint256 allocPoint;       // How many allocation points assigned to this pool. SUSHIs to distribute per block.
-        uint256 lastRewardBlock;  // Last block number that SUSHIs distribution occurs.
+        uint256 allocPoint;       // 
+        uint256 lastRewardBlock;  // 
         uint256 accNsurePerShare; //total 
     }
 
+    ICover public cover;
+ 
     Nsure public nsure;
-    // Block number when bonus SUSHI period ends.
-    // uint256 public bonusEndBlock;
-    // SUSHI tokens created per block.
     uint256 public nsurePerBlock;
-    // Bonus muliplier for early sushi makers.
-    // uint256 public constant BONUS_MULTIPLIER = 10;
-    // // The migrator contract. It has a lot of power. Can only be set through governance (owner).
 
+    uint256 public mcr = 300; //percent 
     uint256 public pendingDuration = 10 minutes;
     //total weigth of each pool
     mapping(uint => uint) public totalWeight;
@@ -58,22 +56,16 @@ contract CapitalStake {
     mapping (uint256 => mapping (address => UserInfo)) public userInfo;
     // Total allocation poitns. Must be the sum of all allocation points in all pools.
     uint256 public totalAllocPoint = 0;
-    // The block number when SUSHI mining starts.
     uint256 public startBlock;
 
     address public devaddr = 0x666747ffD8417a735dFf70264FDf4e29076c775a;
    
 
-    constructor(address _nsure) public {
-        //      Nsure _nsure,
-        // address _devaddr,
-        // uint256 _nsurePerBlock,
-        // uint256 _startBlock,
-        // uint256 _bonusEndBlock
+    constructor(address _nsure,address _cover) public {
         nsure =Nsure(_nsure);
         nsurePerBlock = 10;
-        // bonusEndBlock = block.number;
         startBlock = block.number;
+        cover = ICover(_cover);
     }
     
     //add or sub weight
@@ -178,12 +170,13 @@ contract CapitalStake {
         updatePool(_pid);
         if (user.amount.add(userWeight[_pid][msg.sender]) > 0) {
             user.reward = user.amount.add(userWeight[_pid][msg.sender]).mul(pool.accNsurePerShare).div(1e12).sub(user.rewardDebt).add(user.reward);
-            // safeNsureTransfer(msg.sender, pending);
         }
         pool.lpToken.safeTransferFrom(address(msg.sender), address(this), _amount);
         user.amount = user.amount.add(_amount);
         user.rewardDebt = user.amount.add(userWeight[_pid][msg.sender]).mul(pool.accNsurePerShare).div(1e12);
         pool.amount = pool.amount.add(_amount);
+
+        cover.addAvailable(_amount.mul(mcr).div(100));
         emit Deposit(msg.sender, _pid, _amount);
     }
 
@@ -204,12 +197,12 @@ contract CapitalStake {
         require(block.timestamp >= user.pendingAt.add(pendingDuration) ,"pending");
         updatePool(_pid);
         user.reward = user.amount.add(userWeight[_pid][msg.sender]).mul(pool.accNsurePerShare).div(1e12).sub(user.rewardDebt).add(user.reward);
-        // safeNsureTransfer(msg.sender, pending); //奖励先不取
         user.amount = user.amount.sub(_amount);
         user.rewardDebt = user.amount.add(userWeight[_pid][msg.sender]).mul(pool.accNsurePerShare).div(1e12);
         user.pendingWithdrawal = user.pendingWithdrawal.sub(_amount);
         pool.lpToken.safeTransfer(address(msg.sender), _amount);
         pool.amount = pool.amount.sub(_amount);
+        cover.subAvailable(_amount.mul(mcr).div(100));
         emit Withdraw(msg.sender, _pid, _amount);
     }
 //claim reward

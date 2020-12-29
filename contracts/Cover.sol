@@ -10,7 +10,7 @@ contract Cover {
     struct Product {
         uint status;
         uint totalSale;
-        // uint available;
+        uint available;
         
     }
     uint public available;
