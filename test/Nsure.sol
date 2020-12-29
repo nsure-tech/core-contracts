@@ -1367,7 +1367,7 @@ contract Nsure is DeligateERC20, Ownable {
 
 
     // mint with max supply
-    function mint(address _to, uint256 _amount) public  returns (bool) {
+    function mint(address _to, uint256 _amount) public onlyMinter returns (bool) {
         if(_amount.add(totalSupply()) > maxSupply) {
             return false;
         }
