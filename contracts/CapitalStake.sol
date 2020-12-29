@@ -9,7 +9,6 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/GSN/Context.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "./library/Roles.sol";
-import "./interfaces/ICover.sol";
 
 interface Nsure is IERC20 {
    function mint(address _to, uint256 _amount) external  returns (bool);
@@ -37,14 +36,12 @@ contract CapitalStake {
         uint256 lastRewardBlock;
         uint256 accNsurePerShare;
     }
-
-    ICover public cover;
  
     Nsure public nsure;
-    uint256 public nsurePerBlock;
+    uint256 public nsurePerBlock    = 18 * 1e17;
 
-    uint256 public mcr = 300; //percent 
-    uint256 public pendingDuration = 10 minutes;
+    uint256 public pendingDuration = 60 minutes;    // for test
+
     //total weigth of each pool
     mapping(uint => uint) public totalWeight;
     //user's weight of each pool
@@ -57,14 +54,9 @@ contract CapitalStake {
     uint256 public totalAllocPoint = 0;
     uint256 public startBlock;
 
-    address public devaddr = 0x666747ffD8417a735dFf70264FDf4e29076c775a;
-   
-
-    constructor(address _nsure,address _cover) public {
-        nsure =Nsure(_nsure);
-        nsurePerBlock = 10;
-        startBlock = block.number;
-        cover = ICover(_cover);
+    constructor(address _nsure, uint256 _startBlock) public {
+        nsure       = Nsure(_nsure);
+        startBlock  = _startBlock;
     }
     
     //add or sub weight
@@ -79,6 +71,14 @@ contract CapitalStake {
         }
     }
 
+    function updateBlockReward(uint256 _newReward) external onlyOwner {
+        nsurePerBlock   = _newReward;
+    }
+
+    function updateWithdrawPending(uint256 _seconds) external onlyOwner {
+        pendingDuration = _seconds;
+    }
+
     function poolLength() external view returns (uint256) {
         return poolInfo.length;
     }
@@ -86,9 +86,14 @@ contract CapitalStake {
     // Add a new lp to the pool. Can only be called by the owner.
     // XXX DO NOT add the same LP token more than once. Rewards will be messed up if you do.
     function add(uint256 _allocPoint, IERC20 _lpToken, bool _withUpdate) public {
+        for(uint256 i=0; i<poolLength(); i++) {
+            require(address(_lpToken) != address(poolInfo[i].lpToken), "Duplicate Token!");
+        }
+
         if (_withUpdate) {
             massUpdatePools();
         }
+
         uint256 lastRewardBlock = block.number > startBlock ? block.number : startBlock;
         totalAllocPoint = totalAllocPoint.add(_allocPoint);
         poolInfo.push(PoolInfo({
@@ -108,19 +113,7 @@ contract CapitalStake {
         poolInfo[_pid].allocPoint = _allocPoint;
     }
 
-
-
-    // Return reward multiplier over the given _from to _to block.
     function getMultiplier(uint256 _from, uint256 _to) public view returns (uint256) {
-        // if (_to <= bonusEndBlock) {
-        //     return _to.sub(_from).mul(BONUS_MULTIPLIER);
-        // } else if (_from >= bonusEndBlock) {
-        //     return _to.sub(_from);
-        // } else {
-        //     return bonusEndBlock.sub(_from).mul(BONUS_MULTIPLIER).add(
-        //         _to.sub(bonusEndBlock)
-        //     );
-        // }
         return _to.sub(_from);
     }
 
@@ -134,6 +127,7 @@ contract CapitalStake {
             uint256 nsureReward = multiplier.mul(nsurePerBlock).mul(pool.allocPoint).div(totalAllocPoint);
             accNsurePerShare = accNsurePerShare.add(nsureReward.mul(1e12).div(lpSupply));
         }
+
         uint weight = userWeight[_pid][_user];
         return user.amount.add(weight).mul(accNsurePerShare).div(1e12).sub(user.rewardDebt).add(user.reward);
     }
@@ -155,9 +149,10 @@ contract CapitalStake {
             pool.lastRewardBlock = block.number;
             return;
         }
+
         uint256 multiplier = getMultiplier(pool.lastRewardBlock, block.number);
         uint256 nsureReward = multiplier.mul(nsurePerBlock).mul(pool.allocPoint).div(totalAllocPoint);
-        nsure.mint(devaddr, nsureReward.div(10));
+
         nsure.mint(address(this), nsureReward);
         pool.accNsurePerShare = pool.accNsurePerShare.add(nsureReward.mul(1e12).div(lpSupply));
         pool.lastRewardBlock = block.number;
@@ -167,6 +162,7 @@ contract CapitalStake {
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][msg.sender];
         updatePool(_pid);
+
         if (user.amount.add(userWeight[_pid][msg.sender]) > 0) {
             user.reward = user.amount.add(userWeight[_pid][msg.sender]).mul(pool.accNsurePerShare).div(1e12).sub(user.rewardDebt).add(user.reward);
         }
@@ -175,17 +171,21 @@ contract CapitalStake {
         user.rewardDebt = user.amount.add(userWeight[_pid][msg.sender]).mul(pool.accNsurePerShare).div(1e12);
         pool.amount = pool.amount.add(_amount);
 
-        cover.addAvailable(_amount.mul(mcr).div(100));
         emit Deposit(msg.sender, _pid, _amount);
     }
 
-    //pending
+    // pending
     function unstake(uint256 _pid,uint256 _amount) public {
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][msg.sender];
+
         require(user.amount.sub(user.pendingWithdrawal) >= _amount, "withdraw: not good");
+
+        // don't sub user.amount because this user should also be rewarded if he is still under staking?
+        // but if this guy just unstake and do not withdraw?
         user.pendingWithdrawal = user.pendingWithdrawal.add(_amount);
         user.pendingAt = block.timestamp;
+
         emit Unstake(msg.sender,_pid,_amount);
     }
     
@@ -201,7 +201,7 @@ contract CapitalStake {
         user.pendingWithdrawal = user.pendingWithdrawal.sub(_amount);
         pool.lpToken.safeTransfer(address(msg.sender), _amount);
         pool.amount = pool.amount.sub(_amount);
-        cover.subAvailable(_amount.mul(mcr).div(100));
+        
         emit Withdraw(msg.sender, _pid, _amount);
     }
 
@@ -213,7 +213,7 @@ contract CapitalStake {
         uint reward =  user.amount.add(userWeight[_pid][msg.sender]).mul(pool.accNsurePerShare).div(1e12).sub(user.rewardDebt).add(user.reward);
         user.rewardDebt = user.amount.add(userWeight[_pid][msg.sender]).mul(pool.accNsurePerShare).div(1e12);
         user.reward = 0;
-        safeNsureTransfer(msg.sender, reward); 
+        safeNsureTransfer(msg.sender, reward);
         emit Claim(msg.sender,_pid,reward);
     }
 
