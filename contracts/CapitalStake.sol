@@ -179,30 +179,27 @@ contract CapitalStake {
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][msg.sender];
 
-        require(user.amount.sub(user.pendingWithdrawal) >= _amount, "withdraw: not good");
-
-        // don't sub user.amount because this user should also be rewarded if he is still under staking?
-        // but if this guy just unstake and do not withdraw?
+        require(user.amount >= _amount, "withdraw: not good");
+        updatePool(_pid);
+        user.reward = user.amount.add(userWeight[_pid][msg.sender]).mul(pool.accNsurePerShare).div(1e12).sub(user.rewardDebt).add(user.reward);
+        user.amount = user.amount.sub(_amount);
+        user.rewardDebt = user.amount.add(userWeight[_pid][msg.sender]).mul(pool.accNsurePerShare).div(1e12);
         user.pendingWithdrawal = user.pendingWithdrawal.add(_amount);
         user.pendingAt = block.timestamp;
 
         emit Unstake(msg.sender,_pid,_amount);
     }
     
-    function withdraw(uint256 _pid, uint256 _amount) public {
+    function withdraw(uint256 _pid) public {
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][msg.sender];
-        require(user.pendingWithdrawal >= _amount, "withdraw: not good");
         require(block.timestamp >= user.pendingAt.add(pendingDuration) ,"pending");
-        updatePool(_pid);
-        user.reward = user.amount.add(userWeight[_pid][msg.sender]).mul(pool.accNsurePerShare).div(1e12).sub(user.rewardDebt).add(user.reward);
-        user.amount = user.amount.sub(_amount);
-        user.rewardDebt = user.amount.add(userWeight[_pid][msg.sender]).mul(pool.accNsurePerShare).div(1e12);
-        user.pendingWithdrawal = user.pendingWithdrawal.sub(_amount);
-        pool.lpToken.safeTransfer(address(msg.sender), _amount);
-        pool.amount = pool.amount.sub(_amount);
+        uint256 amount = user.pendingWithdrawal;
+        user.pendingWithdrawal = 0;
+        pool.lpToken.safeTransfer(address(msg.sender), amount);
+        pool.amount = pool.amount.sub(amount);
         
-        emit Withdraw(msg.sender, _pid, _amount);
+        emit Withdraw(msg.sender, _pid,amount);
     }
 
     //claim reward
