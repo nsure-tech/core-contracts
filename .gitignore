@@ -5,3 +5,4 @@ artifacts
 migrations/_*
 .DS_Store
 build
+flatten

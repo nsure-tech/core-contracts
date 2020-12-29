@@ -1,6 +1,3 @@
-/**
- *Submitted for verification at Etherscan.io on 2020-10-08
-*/
 
 // File: @openzeppelin/contracts/utils/EnumerableSet.sol
 

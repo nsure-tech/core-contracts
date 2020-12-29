@@ -4,7 +4,7 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
 pragma solidity ^0.6.0;
 pragma experimental ABIEncoderV2;
 
-contract Cover {
+contract Product {
     using SafeMath for uint;
 
     struct Product {

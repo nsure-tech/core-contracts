@@ -12,7 +12,7 @@ import "@openzeppelin/contracts/math/Math.sol";
 
 pragma solidity ^0.6.0;
 
-contract Stake {
+contract LockFunds {
     
     using SafeMath for uint256;
     using SafeERC20 for ERC20;
