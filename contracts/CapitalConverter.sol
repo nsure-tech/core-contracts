@@ -1,23 +1,22 @@
-
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
-import "@openzeppelin/contracts/utils/Pauseable.sol";
+import "@openzeppelin/contracts/utils/Pausable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/GSN/Context.sol";
 
 
-contract CapitalConverter is ERC20, Ownable, Pauseable, ReentrancyGuard {
+contract CapitalConverter is ERC20, Ownable, Pausable, ReentrancyGuard {
     using SafeMath for uint256;
+    using SafeERC20 for IERC20;
 
     address public ETHEREUM = address(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE);
 
     address public token;
     uint256 public tokenDecimal;
 
-    constructor(address _token, uint256 _tokenDecimal) 
+    constructor(address _token, uint256 _tokenDecimal)
         public  ERC20("name","symbol")
     {
         token           = _token;
@@ -27,23 +26,23 @@ contract CapitalConverter is ERC20, Ownable, Pauseable, ReentrancyGuard {
     receive() external payable {
         revert();
     }
-    
 
-    function smartBalance(address _token) public view returns (uint256) {
-        if (_token == ETHEREUM) {
+
+    function smartBalance() public view returns (uint256) {
+        if (token == ETHEREUM) {
             return address(this).balance;
         }
-        return IERC20(_token).balanceOf(address(this));
+
+        return IERC20(token).balanceOf(address(this));
     }
 
-    function calculateMintAmount(uint256 _depositAmount) internal view returns (uint256) {    
-        uint256 initialBalance = smartBalance(address(this)).sub(tokenDecimal);
-
+    function calculateMintAmount(uint256 _depositAmount) internal view returns (uint256) {
         if (totalSupply() == 0) {
-            uint256 value = _depositAmount.mul(uint256(1e18)).div(10**dollarDecimal);
+            uint256 value = _depositAmount.mul(uint256(1e18)).div(10**tokenDecimal);
             return value;
         }
 
+        uint256 initialBalance = smartBalance().sub(_depositAmount);
         return _depositAmount.mul(totalSupply()).div(initialBalance);
     }
     
@@ -51,9 +50,9 @@ contract CapitalConverter is ERC20, Ownable, Pauseable, ReentrancyGuard {
     function convert(uint256 _amount) public payable nonReentrant whenNotPaused { 
         require(_amount > 0, "CapitalConverter: Cannot stake 0.");
 
-        if (_token != ETHEREUM) {
-            require(msg.value == 0, "CapitalConverter: Should not allow ETH deposits during ERC20 token deposits.");
-            IERC20(_token).safeTransferFrom(_msgSender(), address(this), _amount);
+        if (token != ETHEREUM) {
+            require(msg.value == 0, "CapitalConverter: Should not allow ETH deposits.");
+            IERC20(token).safeTransferFrom(_msgSender(), address(this), _amount);
         } else {
             require(_amount == msg.value, "CapitalConverter: Incorrect eth amount.");
         }
@@ -62,28 +61,38 @@ contract CapitalConverter is ERC20, Ownable, Pauseable, ReentrancyGuard {
         _mint(_msgSender(), value);
         
         // emit event
-        emit Mint(_msgSender(), value);
+        emit eMint(_msgSender(), _amount, value);
     }
 
     // withdraw the ETH or USDx
     function exit(uint256 _value) external nonReentrant whenNotPaused {
         require(balanceOf(_msgSender()) >= _value && _value > 0, "CapitalConverter: _value is not good");
 
-        uint256 value = _value.mul(smartBalance(address(this))).div(totalSupply());
-        _burn(_msgSender(),_value);
-        
+        uint256 value = _value.mul(smartBalance()).div(totalSupply());
         if (token != ETHEREUM) {
-            IERC20(token).transfer(_msgSender(), value);
+            IERC20(token).safeTransfer(_msgSender(), value);
         } else {
             _msgSender().transfer(value);
         }
 
+        _burn(_msgSender(), _value);
+        
         // emit event
-        emit Burn(_msgSender(), _value);
+        emit eBurn(_msgSender(), _value, value);
+    }
+
+    function payouts(address payable _to, uint256 _amount) external onlyOwner {
+        if (token != ETHEREUM) {
+            IERC20(token).safeTransfer(_to, _amount);
+        } else {
+            _to.transfer(_amount);
+        }
+
+        emit ePayouts(_to, _amount);
     }
 
 
-    event Mint(address indexed sender, uint256 amount);
-    event Burn(address indexed sender, uint256 amount);
-   
+    event eMint(address indexed sender, uint256 input, uint256 amount);
+    event eBurn(address indexed sender, uint256 amount, uint256 output);
+    event ePayouts(address indexed to, uint256 amount);
 }

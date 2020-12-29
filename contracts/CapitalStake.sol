@@ -8,7 +8,6 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/GSN/Context.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
-import "@openzeppelin/contracts/utils/EnumerableSet.sol";
 import "./library/Roles.sol";
 import "./interfaces/ICover.sol";
 
@@ -26,17 +25,17 @@ contract CapitalStake {
         uint256 rewardDebt; // Reward debt. See explanation below.
         uint256 reward;
 
-        uint256 pendingWithdrawal;          // payments available for withdrawal by an investor
+        uint256 pendingWithdrawal;  // payments available for withdrawal by an investor
         uint256 pendingAt; 
     }
 
     // Info of each pool.
     struct PoolInfo {
         uint256 amount;             //Total Deposit of Lp token
-        IERC20 lpToken;           // Address of LP token contract.
-        uint256 allocPoint;       // 
-        uint256 lastRewardBlock;  // 
-        uint256 accNsurePerShare; //total 
+        IERC20 lpToken;             // Address of LP token contract.
+        uint256 allocPoint;
+        uint256 lastRewardBlock;
+        uint256 accNsurePerShare;
     }
 
     ICover public cover;
@@ -180,8 +179,8 @@ contract CapitalStake {
         emit Deposit(msg.sender, _pid, _amount);
     }
 
-//pending
-  function unstake(uint256 _pid,uint256 _amount) public {
+    //pending
+    function unstake(uint256 _pid,uint256 _amount) public {
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][msg.sender];
         require(user.amount.sub(user.pendingWithdrawal) >= _amount, "withdraw: not good");
@@ -205,7 +204,8 @@ contract CapitalStake {
         cover.subAvailable(_amount.mul(mcr).div(100));
         emit Withdraw(msg.sender, _pid, _amount);
     }
-//claim reward
+
+    //claim reward
     function claim(uint256 _pid) external {
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][msg.sender];
