@@ -42,11 +42,7 @@ contract CapitalStake is Ownable, Pausable {
 
     uint256 public pendingDuration  = 60 minutes;    // for test
 
-    //total weigth of each pool
-    mapping(uint256 => uint256) public totalWeight;
 
-    //user's weight of each pool
-    mapping(uint256 => mapping(address => uint256)) public userWeight;
 
     // Info of each pool.
     PoolInfo[] public poolInfo;
@@ -64,21 +60,7 @@ contract CapitalStake is Ownable, Pausable {
         startBlock  = _startBlock;
     }
     
-    //add or sub weight
-    function setWeight( uint256 _pid,address _account,uint256 _weight ,
-                        bool _add) external onlyOwner
-    {
-        if(_add){
-            totalWeight[_pid] = totalWeight[_pid].add(_weight);
-            userWeight[_pid][_account] =  userWeight[_pid][_account].add(_weight);
-        }else {
-            require(userWeight[_pid][_account] >= _weight , "insufficient");
-
-            totalWeight[_pid] = totalWeight[_pid].sub(_weight);
-            userWeight[_pid][_account] =  userWeight[_pid][_account].sub(_weight);
-        }
-    }
-
+   
     function updateBlockReward(uint256 _newReward) external onlyOwner {
         nsurePerBlock   = _newReward;
     }
@@ -131,16 +113,16 @@ contract CapitalStake is Ownable, Pausable {
         UserInfo storage user = userInfo[_pid][_user];
 
         uint256 accNsurePerShare = pool.accNsurePerShare;
-        uint256 lpSupply = pool.lpToken.balanceOf(address(this)).add(totalWeight[_pid]);
+        uint256 lpSupply = pool.lpToken.balanceOf(address(this));
         if (block.number > pool.lastRewardBlock && lpSupply != 0) {
             uint256 multiplier = getMultiplier(pool.lastRewardBlock, block.number);
             uint256 nsureReward = multiplier.mul(nsurePerBlock).mul(pool.allocPoint).div(totalAllocPoint);
             accNsurePerShare = accNsurePerShare.add(nsureReward.mul(1e12).div(lpSupply));
         }
 
-        uint256 weight = userWeight[_pid][_user];
-        return user.amount.add(weight).mul(accNsurePerShare).div(1e12).sub(user.rewardDebt).add(user.reward);
+        return user.amount.mul(accNsurePerShare).div(1e12).sub(user.rewardDebt);
     }
+
 
     function massUpdatePools() public {
         uint256 length = poolInfo.length;
@@ -154,7 +136,7 @@ contract CapitalStake is Ownable, Pausable {
         if (block.number <= pool.lastRewardBlock) {
             return;
         }
-        uint256 lpSupply = pool.lpToken.balanceOf(address(this)).add(totalWeight[_pid]);
+        uint256 lpSupply = pool.lpToken.balanceOf(address(this));
         if (lpSupply == 0) {
             pool.lastRewardBlock = block.number;
             return;
@@ -169,23 +151,28 @@ contract CapitalStake is Ownable, Pausable {
         pool.lastRewardBlock = block.number;
     }
 
+
     function deposit(uint256 _pid, uint256 _amount) public whenNotPaused {
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][msg.sender];
         updatePool(_pid);
 
-        if (user.amount.add(userWeight[_pid][msg.sender]) > 0) {
-            user.reward = user.amount.add(userWeight[_pid][msg.sender]).mul(pool.accNsurePerShare).div(1e12).sub(user.rewardDebt).add(user.reward);
+        if (user.amount > 0) {
+            uint256 pending = user.amount.mul(pool.accNsurePerShare).div(1e12).sub(user.rewardDebt);
+            safeNsureTransfer(msg.sender,pending);
         }
 
         pool.lpToken.safeTransferFrom(address(msg.sender), address(this), _amount);
-        
-        user.rewardDebt = user.amount.add(userWeight[_pid][msg.sender]).mul(pool.accNsurePerShare).div(1e12);
         user.amount = user.amount.add(_amount);
+        user.rewardDebt = user.amount.mul(pool.accNsurePerShare).div(1e12);
+        
         pool.amount = pool.amount.add(_amount);
 
         emit Deposit(msg.sender, _pid, _amount);
     }
+
+
+
 
     // pending
     function unstake(uint256 _pid,uint256 _amount) public whenNotPaused {
@@ -194,25 +181,28 @@ contract CapitalStake is Ownable, Pausable {
 
         require(user.amount >= _amount, "unstake: not good");
         updatePool(_pid);
-
-        user.reward = user.amount.add(userWeight[_pid][msg.sender]).mul(pool.accNsurePerShare).div(1e12).sub(user.rewardDebt).add(user.reward);
-        
-        user.rewardDebt = user.amount.add(userWeight[_pid][msg.sender]).mul(pool.accNsurePerShare).div(1e12);
-
+        uint256 pending = user.amount.mul(pool.accNsurePerShare).div(1e12).sub(user.rewardDebt);
+        safeNsureTransfer(msg.sender, pending);
+///
         user.amount = user.amount.sub(_amount);
+        user.rewardDebt = user.amount.mul(pool.accNsurePerShare).div(1e12);
+
+        
         user.pendingWithdrawal = user.pendingWithdrawal.add(_amount);
         user.pendingAt = block.timestamp;
 
         emit Unstake(msg.sender,_pid,_amount);
     }
 
-    function isPending(uint256 _pid) external view returns (bool) {
+
+
+    function isPending(uint256 _pid) external view returns (bool,uint256) {
         UserInfo storage user = userInfo[_pid][msg.sender];
         if(block.timestamp >= user.pendingAt.add(pendingDuration)) {
-            return false;
+            return (false,0);
         }
 
-        return true;
+        return (true,user.pendingAt.add(pendingDuration).sub(block.timestamp));
     }
     
     function withdraw(uint256 _pid) public whenNotPaused {
@@ -229,6 +219,7 @@ contract CapitalStake is Ownable, Pausable {
         emit Withdraw(msg.sender, _pid,amount);
     }
 
+
     //claim reward
     function claim(uint256 _pid) external whenNotPaused {
         PoolInfo storage pool = poolInfo[_pid];
@@ -236,13 +227,12 @@ contract CapitalStake is Ownable, Pausable {
 
         updatePool(_pid);
 
-        uint256 reward =  user.amount.add(userWeight[_pid][msg.sender]).mul(pool.accNsurePerShare).div(1e12).sub(user.rewardDebt).add(user.reward);
-        user.rewardDebt = user.amount.add(userWeight[_pid][msg.sender]).mul(pool.accNsurePerShare).div(1e12);
-        user.reward = 0;
+        uint256 pending = user.amount.mul(pool.accNsurePerShare).div(1e12).sub(user.rewardDebt);
+        safeNsureTransfer(msg.sender, pending);
 
-        safeNsureTransfer(msg.sender, reward);
+        user.rewardDebt = user.amount.mul(pool.accNsurePerShare).div(1e12);
 
-        emit Claim(msg.sender, _pid, reward);
+        emit Claim(msg.sender, _pid, pending);
     }
 
     function emergencyWithdraw(uint256 _pid) public {
@@ -254,12 +244,8 @@ contract CapitalStake is Ownable, Pausable {
 
         user.amount = 0;
         user.rewardDebt = 0;
-        user.reward = 0;
 
-        if(userWeight[_pid][msg.sender] > 0) {
-            totalWeight[_pid] = totalWeight[_pid].sub(userWeight[_pid][msg.sender]);
-            userWeight[_pid][msg.sender] = 0;
-        }
+       
     }
 
     function safeNsureTransfer(address _to, uint256 _amount) internal {

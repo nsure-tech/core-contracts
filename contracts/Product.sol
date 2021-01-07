@@ -1,18 +1,18 @@
 
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 pragma solidity ^0.6.0;
 pragma experimental ABIEncoderV2;
 
-contract Product {
+contract Product is Ownable {
     using SafeMath for uint;
 
     struct Product {
         uint status;
         uint totalSale;
-        uint available;
-        
     }
+
     uint public available;
     address[] public productIndex;
     mapping (address => Product) private _products;
@@ -29,13 +29,13 @@ contract Product {
         return _products[_productAddr];
     }
 
-    function addProduct(address _productAddr, uint _status) public  {
+    function addProduct(address _productAddr, uint _status) public onlyOwner  {
         _products[_productAddr]    =  Product( _status, 0);
         productIndex.push(_productAddr) ;
         emit AddProduct(_productAddr,_status);
     }
 
-    function deleteProduct(address _productAddr) public  {
+    function deleteProduct(address _productAddr) public onlyOwner {
         delete _products[_productAddr];
         for(uint i=0;i<productIndex.length;i++){
             if(productIndex[i] == _productAddr){
@@ -47,7 +47,7 @@ contract Product {
         emit DeleteProduct(_productAddr);
     }
 
-    function updateStatus(address _productAddr,uint _status) public {
+    function updateStatus(address _productAddr,uint _status) public onlyOwner {
         _products[_productAddr].status = _status;
         emit UpdateStatus(_productAddr,_status);
     }
