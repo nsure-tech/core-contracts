@@ -4,13 +4,8 @@ interface ICover {
 
     struct Product {
         uint status;
-        uint totalSale;
-        uint available;
         
     }
-      function getProduct(address _productAddr) external view returns (Product memory) ;
-       function addAvailable(uint _amount) external ;
-       function addTotalSale(address _productAddr,uint _amount) external;
-      function subAvailable(uint _amount) external;
-      function getAvailale()external view returns (uint);
+    function getStatus(uint _productId) external view returns (uint);
+      function getProduct(uint _productId) external view returns (Product memory) ;
 }

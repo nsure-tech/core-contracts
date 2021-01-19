@@ -8,7 +8,7 @@ pragma experimental ABIEncoderV2;
 
 contract Buy is Ownable {
     using SafeMath for uint256;
-    address public signAdmin = 0x666747ffD8417a735dFf70264FDf4e29076c775a;
+    address public signer = 0x666747ffD8417a735dFf70264FDf4e29076c775a;
     string public constant name = "Buy";
     string public version = "1";
 
@@ -31,7 +31,7 @@ contract Buy is Ownable {
     );
     struct Order {
         address payable buyer;
-        address product;
+        uint productId;
         uint256 currency;
         uint256 premium;
         uint256 amount;
@@ -39,6 +39,11 @@ contract Buy is Ownable {
         uint256 createAt;
         uint8 state;
     }
+
+   struct Product {
+        uint status;
+    }
+
 
 constructor(address _stake,address _surplus,address _cover)public {
     stakingPool = _stake;
@@ -54,26 +59,30 @@ constructor(address _stake,address _surplus,address _cover)public {
     /// @notice The EIP-712 typehash for the permit struct used by the contract
     bytes32 public constant BUY_INSURANCE_TYPEHASH =
         keccak256(
-            "BuyInsurance(address product,address account,uint256 amount,uint256 cost,uint256 currencyType,uint256 period,uint256 nonce,uint256 deadline)"
+            "BuyInsurance(uint256 product,address account,uint256 amount,uint256 cost,uint256 currencyType,uint256 period,uint256 nonce,uint256 deadline)"
         );
 
-    function setStakeAddr(address _addr) external {
+    function setStakeAddr(address _addr) external onlyOwner{
         stakingPool = _addr;
     }
 
-    function setSurplusAddr(address _addr) external {
+    function setSurplusAddr(address _addr) external onlyOwner{
         surplus = _addr;
     }
 
-    function setSurplusRate(uint _rate) external {
+    function setSurplusRate(uint _rate) external onlyOwner{
         surplueRate = _rate;
     }
 
-    function setStakeRate(uint _rate) external {
+    function setStakeRate(uint _rate) external  onlyOwner{
         stakeRate = _rate;
     }
+
+    function setSigner(address _signer) external onlyOwner {
+        signer = _signer;
+    }
     function buyInsuranceWithETH(
-        address _productAddr,
+        uint _productId,
         uint256 _amount,
         uint256 _cost,
         uint256 period,
@@ -83,12 +92,7 @@ constructor(address _stake,address _surplus,address _cover)public {
         uint256 deadline
     ) external payable {
         require(msg.value == _cost,"not eq");
-        // ICover.Product memory _productInfo = _product.getProduct(_productAddr);
-        // require(_productInfo.status == 1, "this product is disabled!");
-        require(_product.getAvailale() >= _amount,"not enough");
-
-        // Initialize order data
-
+        require(_product.getStatus(_productId) == 0,"disable");
         bytes32 domainSeparator =
             keccak256(
                 abi.encode(
@@ -103,7 +107,7 @@ constructor(address _stake,address _surplus,address _cover)public {
             keccak256(
                 abi.encode(
                     BUY_INSURANCE_TYPEHASH,
-                    address(_productAddr),
+                    _productId,
                     address(msg.sender),
                     _amount,
                     _cost,
@@ -119,7 +123,7 @@ constructor(address _stake,address _surplus,address _cover)public {
             );
         address signatory = ecrecover(digest, v, r, s);
         require(signatory != address(0), "invalid signature");
-        require(signatory == signAdmin, "unauthorized");
+        require(signatory == signer, "unauthorized");
         require(block.timestamp <= deadline, "signature expired");
 
         Order storage _order = insuranceOrders[orderIndex];
@@ -127,15 +131,13 @@ constructor(address _stake,address _surplus,address _cover)public {
 
         _order.buyer    = _msgSender();
         _order.currency =1;
-        _order.product = _productAddr;
+        _order.productId = _productId;
         _order.premium = _cost;
         _order.amount = _amount;
         _order.createAt = block.timestamp;
         _order.period = period;
         _order.state = 0;
 
-        // //update product
-        // _product.subAvailable(_amount);
 
         // //transfer eth to staking Pool and Surplus
         payable(stakingPool).transfer(msg.value.mul(stakeRate).div(100));
@@ -157,10 +159,6 @@ constructor(address _stake,address _surplus,address _cover)public {
         bytes32 s,
         uint256 deadline
     ) external {
-        // Product memory _productInfo = _products.getProduct(_productAddr);
-        // require(_productInfo.status == 1, "this product is disabled!");
-
-        // Initialize order data
 
         bytes32 domainSeparator =
             keccak256(
@@ -191,7 +189,7 @@ constructor(address _stake,address _surplus,address _cover)public {
             );
         address signatory = ecrecover(digest, v, r, s);
         require(signatory != address(0), "invalid signature");
-        require(signatory == signAdmin, "unauthorized");
+        require(signatory == signer, "unauthorized");
         require(block.timestamp <= deadline, "signature expired");
         require(account == msg.sender, "not yout tx");
 

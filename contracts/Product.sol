@@ -9,70 +9,56 @@ contract Product is Ownable {
     using SafeMath for uint;
 
     struct Product {
-        uint status;
-        uint totalSale;
+        uint status; //0:enable 1:disable
     }
 
-    uint public available;
-    address[] public productIndex;
-    mapping (address => Product) private _products;
+
+    uint256[] public productId;
+    mapping (uint => Product) private _products;
+    mapping (uint=>bool) private exist;
 
     function getLength() public view returns (uint) {
-        return productIndex.length;
+        return productId.length;
     }
 
-  function getAvailale()public view returns (uint){
-      return available;
-  }
 
-    function getProduct(address _productAddr) public view returns (Product memory) {
-        return _products[_productAddr];
+    function getProduct(uint _productId) public view returns (Product memory) {
+        return _products[_productId];
     }
 
-    function addProduct(address _productAddr, uint _status) public onlyOwner  {
-        _products[_productAddr]    =  Product( _status, 0);
-        productIndex.push(_productAddr) ;
-        emit AddProduct(_productAddr,_status);
+function getStatus(uint _productId) external view returns (uint) {
+    return _products[_productId].status;
+}
+    function addProduct(uint _productId, uint _status) public onlyOwner  {
+        require(exist[_productId] == false,"exist");
+        exist[_productId] = true;
+        _products[_productId]    =  Product(_status);
+        productId.push(_productId) ;
+        emit AddProduct(_productId,_status);
     }
 
-    function deleteProduct(address _productAddr) public onlyOwner {
-        delete _products[_productAddr];
-        for(uint i=0;i<productIndex.length;i++){
-            if(productIndex[i] == _productAddr){
-                productIndex[i] = productIndex[productIndex.length-1];
-                productIndex.pop();
+    function deleteProduct(uint _productId) public onlyOwner {
+        delete _products[_productId];
+        for(uint i=0;i<productId.length;i++){
+            if(productId[i] == _productId){
+                productId[i] = productId[productId.length-1];
+                productId.pop();
                 break;
             }
         }
-        emit DeleteProduct(_productAddr);
+        exist[_productId] = false;
+        emit DeleteProduct(_productId);
     }
 
-    function updateStatus(address _productAddr,uint _status) public onlyOwner {
-        _products[_productAddr].status = _status;
-        emit UpdateStatus(_productAddr,_status);
+    function updateStatus(uint _productId,uint _status) public onlyOwner {
+        _products[_productId].status = _status;
+        emit UpdateStatus(_productId,_status);
     }
     
-    function addTotalSale(address _productAddr,uint _amount) public {
-        _products[_productAddr].totalSale = _products[_productAddr].totalSale.add(_amount);
-       emit AddTotalSale(_productAddr,_amount);
-    }
 
-    function subAvailable(uint _amount) public {
-        // _products[_productAddr].available = _products[_productAddr].available.sub(_amount);
-        available = available.sub(_amount);
-        emit SubAvailable(_amount);
-    }
 
-    function addAvailable(uint _amount) public {
-        // _products[_productAddr].available = _products[_productAddr].available.add(_amount);
-        available = available.add(_amount);
-        emit AddAvailable(_amount);
-    }
 
-    event AddAvailable(uint256 amount);
-    event SubAvailable(uint256 amount);
-    event AddTotalSale(address indexed product,uint256 amount);
-    event UpdateStatus(address indexed product,uint256 status);
-    event DeleteProduct(address indexed product);
-    event AddProduct(address indexed product,uint256 status);
+    event UpdateStatus(uint  product,uint256 status);
+    event DeleteProduct(uint  product);
+    event AddProduct(uint  product,uint256 status);
 }
