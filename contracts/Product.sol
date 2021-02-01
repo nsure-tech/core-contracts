@@ -2,6 +2,7 @@
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+
 pragma solidity ^0.6.0;
 pragma experimental ABIEncoderV2;
 
@@ -9,9 +10,9 @@ contract Product is Ownable {
     using SafeMath for uint;
 
     struct Product {
-        uint status; //0:enable 1:disable
+        // 0:enable 1:disable
+        uint status;
     }
-
 
     uint256[] public productId;
     mapping (uint => Product) private _products;
@@ -31,14 +32,17 @@ function getStatus(uint _productId) external view returns (uint) {
 }
     function addProduct(uint _productId, uint _status) public onlyOwner  {
         require(exist[_productId] == false,"exist");
-        exist[_productId] = true;
-        _products[_productId]    =  Product(_status);
+
+        _products[_productId] =  Product(_status);
         productId.push(_productId) ;
+        exist[_productId] = true;
+
         emit AddProduct(_productId,_status);
     }
 
     function deleteProduct(uint _productId) public onlyOwner {
         delete _products[_productId];
+        
         for(uint i=0;i<productId.length;i++){
             if(productId[i] == _productId){
                 productId[i] = productId[productId.length-1];
@@ -47,11 +51,13 @@ function getStatus(uint _productId) external view returns (uint) {
             }
         }
         exist[_productId] = false;
+
         emit DeleteProduct(_productId);
     }
 
     function updateStatus(uint _productId,uint _status) public onlyOwner {
         _products[_productId].status = _status;
+        
         emit UpdateStatus(_productId,_status);
     }
     

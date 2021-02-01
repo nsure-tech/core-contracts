@@ -183,7 +183,7 @@ contract CapitalStake is Ownable, Pausable {
         updatePool(_pid);
         uint256 pending = user.amount.mul(pool.accNsurePerShare).div(1e12).sub(user.rewardDebt);
         safeNsureTransfer(msg.sender, pending);
-///
+
         user.amount = user.amount.sub(_amount);
         user.rewardDebt = user.amount.mul(pool.accNsurePerShare).div(1e12);
 
@@ -193,7 +193,6 @@ contract CapitalStake is Ownable, Pausable {
 
         emit Unstake(msg.sender,_pid,_amount);
     }
-
 
 
     function isPending(uint256 _pid) external view returns (bool,uint256) {

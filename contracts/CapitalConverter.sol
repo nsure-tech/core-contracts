@@ -47,7 +47,7 @@ contract CapitalConverter is ERC20, Ownable, Pausable, ReentrancyGuard {
     }
     
     // convert ETH or USDx to nETH/nUSDx
-    function convert(uint256 _amount) public payable nonReentrant whenNotPaused { 
+    function convert(uint256 _amount) public payable nonReentrant whenNotPaused {
         require(_amount > 0, "CapitalConverter: Cannot stake 0.");
 
         if (token != ETHEREUM) {

@@ -14,21 +14,19 @@ contract Buy is Ownable {
 
     address public stakingPool;
     address public surplus;
-    address public token;
     ICover public _product ;
+
     /// @notice A record of states for signing / validating signatures
     mapping(address => uint256) public nonces;
 
     // IProduct public _product;
     uint256 public orderIndex = 1000;
-    uint256 public rate = 500;
     uint256 public surplueRate = 10;
     uint256 public stakeRate = 40;
     mapping(uint256 => Order) public insuranceOrders;
 
-    event NewOrder(
-        Order
-    );
+    event NewOrder(Order);
+
     struct Order {
         address payable buyer;
         uint productId;
@@ -40,28 +38,32 @@ contract Buy is Ownable {
         uint8 state;
     }
 
-   struct Product {
+    struct Product {
         uint status;
     }
 
 
-constructor(address _stake,address _surplus,address _cover)public {
-    stakingPool = _stake;
-    surplus = _surplus;
-    _product = ICover(_cover);
-}
+    constructor(address _stake,address _surplus,address _cover) public {
+        stakingPool = _stake;
+        surplus = _surplus;
+        
+        _product = ICover(_cover);
+    }
+
     /// @notice The EIP-712 typehash for the contract's domain
     bytes32 public constant DOMAIN_TYPEHASH =
         keccak256(
             "EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"
-        );
+    );
 
     /// @notice The EIP-712 typehash for the permit struct used by the contract
     bytes32 public constant BUY_INSURANCE_TYPEHASH =
         keccak256(
             "BuyInsurance(uint256 product,address account,uint256 amount,uint256 cost,uint256 currencyType,uint256 period,uint256 nonce,uint256 deadline)"
-        );
+    );
 
+
+    ////////////////// admin ///////////////
     function setStakeAddr(address _addr) external onlyOwner{
         stakingPool = _addr;
     }
@@ -81,6 +83,8 @@ constructor(address _stake,address _surplus,address _cover)public {
     function setSigner(address _signer) external onlyOwner {
         signer = _signer;
     }
+
+
     function buyInsuranceWithETH(
         uint _productId,
         uint256 _amount,
@@ -93,6 +97,7 @@ constructor(address _stake,address _surplus,address _cover)public {
     ) external payable {
         require(msg.value == _cost,"not eq");
         require(_product.getStatus(_productId) == 0,"disable");
+
         bytes32 domainSeparator =
             keccak256(
                 abi.encode(
@@ -121,6 +126,7 @@ constructor(address _stake,address _surplus,address _cover)public {
             keccak256(
                 abi.encodePacked("\x19\x01", domainSeparator, structHash)
             );
+            
         address signatory = ecrecover(digest, v, r, s);
         require(signatory != address(0), "invalid signature");
         require(signatory == signer, "unauthorized");
