@@ -1,13 +1,13 @@
 const Buy = artifacts.require("Buy"); //7
-// const Stake = artifacts.require("Stake"); //6
+// const Stake = artifacts.require("LockFunds"); //6
 // const CapitalStake = artifacts.require("CapitalStake"); //5
 // const CapitalExchange = artifacts.require("CapitalExchange"); //4
 // const Nsure = artifacts.require("Nsure"); //3
 // const Surplus = artifacts.require("Surplus"); //2
-// const Cover = artifacts.require("Cover"); //1
+// const Cover = artifacts.require("Product"); //1
 
 
-//0x8A86528c077785a73f978c52f72F4917A2dBd9EE
+//0xa5a489D44db79E9E59E1A454EC3857cFe45B1F34
 // module.exports = function (deployer) {
 //   deployer.deploy(Cover);
 // };
@@ -17,7 +17,7 @@ const Buy = artifacts.require("Buy"); //7
 //   deployer.deploy(Surplus);
 // };
 
-// // //0x4eC851036118b265612Fc6aFaaf250Cf81E28D70
+// // //0x6cf83f10234ac1db01baed7e45c52a59c9c66a3b
 // module.exports = function (deployer) {
 //   deployer.deploy(Nsure);
 // };
@@ -30,18 +30,18 @@ const Buy = artifacts.require("Buy"); //7
 
 // // //0x411a23Db417ABE388Eac940Dd2C78c4227E81c0D
 // module.exports = function (deployer) { //nsure,cover
-//   deployer.deploy(CapitalStake,'0x4eC851036118b265612Fc6aFaaf250Cf81E28D70','0x8A86528c077785a73f978c52f72F4917A2dBd9EE');
+//   deployer.deploy(CapitalStake,'0x6cf83f10234ac1db01baed7e45c52a59c9c66a3b','0x8A86528c077785a73f978c52f72F4917A2dBd9EE');
 // };
 
 
-// 0x7124eC0CEB84bFdb668a5C2C8c6d487600f1d66d
+// 0xcC8f135Bb303e633b01C3a3e3762a4B085B089d6
 // module.exports = function (deployer) { //nsure,usdt(not avaiable)
-//   deployer.deploy(Stake,'0x4eC851036118b265612Fc6aFaaf250Cf81E28D70','0x4eC851036118b265612Fc6aFaaf250Cf81E28D70');
+//   deployer.deploy(Stake,'0x6cf83f10234ac1db01baed7e45c52a59c9c66a3b','0x6cf83f10234ac1db01baed7e45c52a59c9c66a3b');
 // };
 
-//0x3D433536eeF9A9B9D2d5356f2F608dF743A3DE96
+// //0xfB2AeeEac92e9Af00ab0993472672bb16c65ffAE
 module.exports = function (deployer) { //address _stake,address _surplus,address _cover
-  deployer.deploy(Buy,'0x7124eC0CEB84bFdb668a5C2C8c6d487600f1d66d',
+  deployer.deploy(Buy,'0xcC8f135Bb303e633b01C3a3e3762a4B085B089d6',
   '0xA837C739e70294D080800C8DA6AB46266aB03737',
-  '0x8A86528c077785a73f978c52f72F4917A2dBd9EE');
+  '0xa5a489D44db79E9E59E1A454EC3857cFe45B1F34');
 };

@@ -12,17 +12,29 @@ import "./interfaces/INsure.sol";
 
 pragma solidity ^0.6.0;
 
+
 contract LockFunds is Ownable {
     
     using SafeMath for uint256;
-    using SafeERC20 for ERC20;
+    using SafeERC20 for IERC20;
     
     address public signer = 0x666747ffD8417a735dFf70264FDf4e29076c775a; 
     string constant public name = "Stake";
     string public version = "1";
     
+    uint256 public depositMax = 1000000e18;
+    uint256 public deadlineDuration = 30 minutes;
+    
+    address public operator;
     /// @notice A record of states for signing / validating signatures
     mapping (address => uint) public nonces;
+    
+    struct DivCurrencie {
+        address divCurrencie;
+        uint256 limit;
+    }
+    DivCurrencie[] public divCurrencies;
+    
 
     INsure public Nsure;
     uint256 private _totalSupply;
@@ -35,7 +47,12 @@ contract LockFunds is Ownable {
     event Withdraw(address indexed user,  uint256 amount);
     event Unstake(address indexed user,uint256 amount);
     event Claim(address indexed user,uint256 currency,uint256 amount);
+    event Burn(address indexed user,uint256 amount);
     
+    modifier onlyOperator() {
+        require(msg.sender == operator,"not operator");
+        _;
+    }
 
       /// @notice The EIP-712 typehash for the contract's domain
     bytes32 public constant DOMAIN_TYPEHASH = keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)");
@@ -69,9 +86,31 @@ contract LockFunds is Ownable {
         signer = _signer;
     }
  
+ function setOperator(address _operator) external onlyOwner {
+     operator = _operator;
+ }
+ function setDeadlineDuration(uint256 _duration) external onlyOwner {
+     deadlineDuration = _duration;
+ }
+ 
+    function getDivCurrencyLength() public view returns (uint256) {
+        return divCurrencies.length;
+    }
+
+    
+    function addDivCurrency(address _currency,uint256 _limit) public onlyOwner {
+        divCurrencies.push(DivCurrencie({divCurrencie:_currency,limit:_limit}));
+    }
+
+  
+
+function setDepositMax(uint256 _max) external onlyOwner{
+    depositMax = _max;
+}
+
     function deposit(uint amount) external {
         require(amount > 0, "Cannot stake 0");
-
+        require(amount <= depositMax,"too much");
         _totalSupply = _totalSupply.add(amount);
         _balances[msg.sender] = _balances[msg.sender].add(amount);
 
@@ -99,9 +138,16 @@ contract LockFunds is Ownable {
     }
 
     // burn 1/2 for claiming 
-    function burnOuts(address [] _burnUsers, uint256[] _amounts) external onlyOwner {
+    function burnOuts(address[] memory _burnUsers, uint256[] memory _amounts) external onlyOperator {
         // for循环执行下述命令
-
+        require(_burnUsers.length == _amounts.length,"not equal");
+        for(uint256 i = 0;i<_burnUsers.length;i++){
+            require(_balances[_burnUsers[i]] >= _amounts[i],"insufficient");
+            Nsure.burn(_amounts[i]);
+            _balances[_burnUsers[i]] = _balances[_burnUsers[i]].sub(_amounts[i]);
+            emit Burn(_burnUsers[i],_amounts[i]);
+        }
+        
         // 0. require检查
 
         // 1. 销毁该合约对应金额
@@ -111,9 +157,10 @@ contract LockFunds is Ownable {
         // 3. 触发事件
     }
 
-    function claim(uint _amount,uint ,uint deadline,uint8 v, bytes32 r, bytes32 s) external {
+    function claim(uint _amount,uint currency,uint deadline,uint8 v, bytes32 r, bytes32 s) external {
         require(block.timestamp > claimAt[msg.sender].add(claimDuration),"wait" );
-
+        require(block.timestamp.add(deadlineDuration) > deadline,"expired");
+        require(_amount <= divCurrencies[currency].limit,"too much");
         bytes32 domainSeparator = keccak256(abi.encode(DOMAIN_TYPEHASH, keccak256(bytes(name)),keccak256(bytes(version)), getChainId(), address(this)));
         bytes32 structHash = keccak256(abi.encode(CLAIM_TYPEHASH,address(msg.sender),currency, _amount,nonces[msg.sender]++, deadline));
         bytes32 digest = keccak256(abi.encodePacked("\x19\x01", domainSeparator, structHash));
@@ -123,14 +170,17 @@ contract LockFunds is Ownable {
         require(signatory == signer, "unauthorized");
         require(block.timestamp <= deadline, "signature expired");
 
-        if(currency ==1){
-            msg.sender.transfer(_amount);
-        }else{
-            // USDT.safeTransfer(msg.sender,_amount);
-        }
+        // if(currency ==1){
+        //     msg.sender.transfer(_amount);
+        // }else{
+        //     // USDT.safeTransfer(msg.sender,_amount);
+        // }
+        
+        IERC20(divCurrencies[currency].divCurrencie).safeTransfer(msg.sender,_amount);
 
         emit Claim(msg.sender,currency,_amount);
     }
+
 
 
     function getChainId() public pure returns (uint) {
@@ -139,10 +189,7 @@ contract LockFunds is Ownable {
         return chainId;
     }
 
-    function burnNsure(uint256 _amount)external onlyOwner {
-        Nsure.burn(_amount);
-    }
-    
+ 
 
     receive() external payable {}
    

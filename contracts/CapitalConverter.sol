@@ -13,9 +13,16 @@ contract CapitalConverter is ERC20, Ownable, Pausable, ReentrancyGuard {
 
     address public ETHEREUM = address(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE);
 
+    uint256 public maxConvert = 100e18;
     address public token;
     uint256 public tokenDecimal;
 
+    address public operator;
+
+    modifier onlyOperator(){
+        require(msg.sender == operator,"not operator");
+        _;
+    }
     constructor(address _token, uint256 _tokenDecimal)
         public  ERC20("name","symbol")
     {
@@ -49,7 +56,7 @@ contract CapitalConverter is ERC20, Ownable, Pausable, ReentrancyGuard {
     // convert ETH or USDx to nETH/nUSDx
     function convert(uint256 _amount) public payable nonReentrant whenNotPaused {
         require(_amount > 0, "CapitalConverter: Cannot stake 0.");
-
+        require(_amount <= maxConvert,"too much");
         if (token != ETHEREUM) {
             require(msg.value == 0, "CapitalConverter: Should not allow ETH deposits.");
             IERC20(token).safeTransferFrom(_msgSender(), address(this), _amount);
@@ -81,7 +88,7 @@ contract CapitalConverter is ERC20, Ownable, Pausable, ReentrancyGuard {
         emit eBurn(_msgSender(), _value, value);
     }
 
-    function payouts(address payable _to, uint256 _amount) external onlyOwner {
+    function payouts(address payable _to, uint256 _amount) external onlyOperator {
         if (token != ETHEREUM) {
             IERC20(token).safeTransfer(_to, _amount);
         } else {

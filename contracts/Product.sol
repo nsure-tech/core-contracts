@@ -16,7 +16,7 @@ contract Product is Ownable {
 
     uint256[] public productId;
     mapping (uint => Product) private _products;
-    mapping (uint=>bool) private exist;
+    // mapping (uint=>bool) private exist;
 
     function getLength() public view returns (uint) {
         return productId.length;
@@ -31,11 +31,15 @@ function getStatus(uint _productId) external view returns (uint) {
     return _products[_productId].status;
 }
     function addProduct(uint _productId, uint _status) public onlyOwner  {
-        require(exist[_productId] == false,"exist");
-
+        // require(exist[_productId] == false,"exist");
+        for(uint256 i=0;i<productId.length;i++){
+            if(productId[i] == _productId){
+                return;
+            }
+        }
         _products[_productId] =  Product(_status);
         productId.push(_productId) ;
-        exist[_productId] = true;
+        // exist[_productId] = true;
 
         emit AddProduct(_productId,_status);
     }
@@ -50,7 +54,7 @@ function getStatus(uint _productId) external view returns (uint) {
                 break;
             }
         }
-        exist[_productId] = false;
+        // exist[_productId] = false;
 
         emit DeleteProduct(_productId);
     }

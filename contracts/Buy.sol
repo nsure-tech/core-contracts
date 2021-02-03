@@ -1,19 +1,25 @@
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
+import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "./interfaces/ICover.sol";
+import "./interfaces/IWETH.sol";
+
 
 pragma solidity >=0.6.0;
 pragma experimental ABIEncoderV2;
 
 contract Buy is Ownable {
     using SafeMath for uint256;
+    using SafeERC20 for IERC20;
+    address public WETH;
     address public signer = 0x666747ffD8417a735dFf70264FDf4e29076c775a;
     string public constant name = "Buy";
     string public version = "1";
 
     address public stakingPool;
     address public surplus;
+    address public treasury;
     ICover public _product ;
 
     /// @notice A record of states for signing / validating signatures
@@ -21,8 +27,9 @@ contract Buy is Ownable {
 
     // IProduct public _product;
     uint256 public orderIndex = 1000;
-    uint256 public surplueRate = 10;
-    uint256 public stakeRate = 40;
+    uint256 public surplueRate = 40;
+    uint256 public stakeRate = 50;
+    uint256 public treasuryRate = 10;
     mapping(uint256 => Order) public insuranceOrders;
 
     event NewOrder(Order);
@@ -42,11 +49,14 @@ contract Buy is Ownable {
         uint status;
     }
 
+    address[]  public  divCurrencies;
 
-    constructor(address _stake,address _surplus,address _cover) public {
+
+    constructor(address _stake,address _surplus,address _cover,address _weth,address _treasury) public {
         stakingPool = _stake;
         surplus = _surplus;
-        
+        WETH = _weth;
+        treasury = _treasury;
         _product = ICover(_cover);
     }
 
@@ -72,6 +82,10 @@ contract Buy is Ownable {
         surplus = _addr;
     }
 
+    function setTreasury (address _addr) external onlyOwner {
+        treasury = _addr;
+    }
+    
     function setSurplusRate(uint _rate) external onlyOwner{
         surplueRate = _rate;
     }
@@ -85,6 +99,23 @@ contract Buy is Ownable {
     }
 
 
+  function addDivCurrency(address currency) public onlyOwner {
+        divCurrencies.push(currency);
+    }
+
+    function delDivCurrency(address currency) public onlyOwner {
+        for(uint256 i=0;i<divCurrencies.length;i++){
+            if(divCurrencies[i]== currency){
+                delete divCurrencies[i];
+            }
+        }
+    }
+    
+
+    function getDivCurrencyLength() public view returns (uint256) {
+        return divCurrencies.length;
+    }
+
     function buyInsuranceWithETH(
         uint _productId,
         uint256 _amount,
@@ -93,10 +124,24 @@ contract Buy is Ownable {
         uint8 v,
         bytes32 r,
         bytes32 s,
-        uint256 deadline
+        uint256 deadline,
+        uint256 currency
     ) external payable {
-        require(msg.value == _cost,"not eq");
+        
         require(_product.getStatus(_productId) == 0,"disable");
+        if(currency == 0){
+            //eth
+            require(msg.value == _cost,"not eq");
+            payable(stakingPool).transfer(msg.value.mul(stakeRate).div(100));
+            payable(surplus).transfer(msg.value.mul(surplueRate).div(100));
+            payable(treasury).transfer(msg.value.mul(treasuryRate).div(100));
+            
+        }else {
+            IERC20(divCurrencies[currency]).safeTransferFrom(msg.sender,address(stakingPool),_cost.mul(stakeRate).div(100));
+            IERC20(divCurrencies[currency]).safeTransferFrom(msg.sender,address(surplus),_cost.mul(surplueRate).div(100));
+            IERC20(divCurrencies[currency]).safeTransferFrom(msg.sender,address(treasury),_cost.mul(treasuryRate).div(100));
+            
+        }
 
         bytes32 domainSeparator =
             keccak256(
@@ -116,7 +161,7 @@ contract Buy is Ownable {
                     address(msg.sender),
                     _amount,
                     _cost,
-                    1,
+                    currency,
                     period,
                     nonces[msg.sender]++,
                     deadline
@@ -136,7 +181,7 @@ contract Buy is Ownable {
         orderIndex++;
 
         _order.buyer    = _msgSender();
-        _order.currency =1;
+        _order.currency =currency;
         _order.productId = _productId;
         _order.premium = _cost;
         _order.amount = _amount;
@@ -144,79 +189,9 @@ contract Buy is Ownable {
         _order.period = period;
         _order.state = 0;
 
-
-        // //transfer eth to staking Pool and Surplus
-        payable(stakingPool).transfer(msg.value.mul(stakeRate).div(100));
-        payable(surplus).transfer(msg.value.mul(surplueRate).div(100));
-
         emit NewOrder(
             _order
         );
-    }
-
-    function buyInsuranceWithStable(
-        address _productAddr,
-        address account,
-        uint256 _amount,
-        uint256 _cost,
-        uint256 period,
-        uint8 v,
-        bytes32 r,
-        bytes32 s,
-        uint256 deadline
-    ) external {
-
-        bytes32 domainSeparator =
-            keccak256(
-                abi.encode(
-                    DOMAIN_TYPEHASH,
-                    keccak256(bytes(name)),
-                    keccak256(bytes(version)),
-                    getChainId(),
-                    address(this)
-                )
-            );
-        bytes32 structHash =
-            keccak256(
-                abi.encode(
-                    BUY_INSURANCE_TYPEHASH,
-                    _productAddr,
-                    account,
-                    _amount,
-                    _cost,
-                    2,
-                    nonces[msg.sender]++,
-                    deadline
-                )
-            );
-        bytes32 digest =
-            keccak256(
-                abi.encodePacked("\x19\x01", domainSeparator, structHash)
-            );
-        address signatory = ecrecover(digest, v, r, s);
-        require(signatory != address(0), "invalid signature");
-        require(signatory == signer, "unauthorized");
-        require(block.timestamp <= deadline, "signature expired");
-        require(account == msg.sender, "not yout tx");
-
-        Order storage _order = insuranceOrders[orderIndex];
-        orderIndex++;
-        // require(_order.buyer == address(0), "order id is not empty?!");
-
-        // _order.buyer    = _msgSender();
-        // _order.premium  = premium;
-        // _order.price    = _amount;
-        // _order.state    = 0;
-        // _order.settleBlockNumber = _blocks.add(block.number);
-
-        //update product
-        // _product.sub(_productAddr,_amount);
-
-        //staking pool
-
-        // IERC20(_token).safeTransferFrom(msg.sender,address(this),_amount);
-        // stake(_amount);
-        // emit NewOrder(_orderId, _order.buyer, _productAddr, _order.premium, _order.price, _order.settleBlockNumber);
     }
 
     function getChainId() public pure returns (uint256) {

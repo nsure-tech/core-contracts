@@ -1,3 +1,6 @@
+/**
+ *Submitted for verification at Etherscan.io on 2020-10-08
+*/
 
 // File: @openzeppelin/contracts/utils/EnumerableSet.sol
 
@@ -1361,8 +1364,8 @@ contract Nsure is DeligateERC20, Ownable {
     EnumerableSet.AddressSet private _minters;
 
 
-    constructor() public ERC20("Nsure Token Test", "NsureTest") {
-        _mint(msg.sender, preMineSupply);
+    constructor() public ERC20("Nsure Network Token", "Nsure") {
+        _mint(nsureAdmin, preMineSupply);
     }
 
 

@@ -1,6 +1,6 @@
 // File: @openzeppelin/contracts/token/ERC20/IERC20.sol
 
-// SPDX-License-Identifier: MIT
+
 
 pragma solidity ^0.6.0;
 
@@ -80,7 +80,7 @@ interface IERC20 {
 
 // File: @openzeppelin/contracts/math/SafeMath.sol
 
-// SPDX-License-Identifier: MIT
+
 
 pragma solidity ^0.6.0;
 
@@ -242,7 +242,7 @@ library SafeMath {
 
 // File: @openzeppelin/contracts/utils/Address.sol
 
-// SPDX-License-Identifier: MIT
+
 
 pragma solidity ^0.6.2;
 
@@ -386,7 +386,7 @@ library Address {
 
 // File: @openzeppelin/contracts/GSN/Context.sol
 
-// SPDX-License-Identifier: MIT
+
 
 pragma solidity ^0.6.0;
 
@@ -413,7 +413,7 @@ abstract contract Context {
 
 // File: @openzeppelin/contracts/token/ERC20/ERC20.sol
 
-// SPDX-License-Identifier: MIT
+
 
 pragma solidity ^0.6.0;
 
@@ -722,7 +722,7 @@ contract ERC20 is Context, IERC20 {
 
 // File: @openzeppelin/contracts/access/Ownable.sol
 
-// SPDX-License-Identifier: MIT
+
 
 pragma solidity ^0.6.0;
 
@@ -792,7 +792,7 @@ contract Ownable is Context {
 
 // File: @openzeppelin/contracts/token/ERC20/SafeERC20.sol
 
-// SPDX-License-Identifier: MIT
+
 
 pragma solidity ^0.6.0;
 
@@ -869,7 +869,7 @@ library SafeERC20 {
 
 // File: @openzeppelin/contracts/utils/EnumerableSet.sol
 
-// SPDX-License-Identifier: MIT
+
 
 pragma solidity ^0.6.0;
 
@@ -1113,271 +1113,153 @@ library EnumerableSet {
     }
 }
 
-// File: contracts/library/Roles.sol
+// File: @openzeppelin/contracts/math/Math.sol
 
-library Roles {
-    struct Role {
-        mapping(address => bool) bearer;
-    }
 
-    /**
-     * @dev Give an account access to this role.
-     */
-    function add(Role storage role, address account) internal {
-        require(!has(role, account), "Roles: account already has role");
-        role.bearer[account] = true;
-    }
-
-    /**
-     * @dev Remove an account's access to this role.
-     */
-    function remove(Role storage role, address account) internal {
-        require(has(role, account), "Roles: account does not have role");
-        role.bearer[account] = false;
-    }
-
-    /**
-     * @dev Check if an account has this role.
-     * @return bool
-     */
-    function has(Role storage role, address account) internal view returns (bool) {
-        require(account != address(0), "Roles: account is the zero address");
-        return role.bearer[account];
-    }
-}
-
-// File: contracts/CapitalStake.sol
 
 pragma solidity ^0.6.0;
 
+/**
+ * @dev Standard math utilities missing in the Solidity language.
+ */
+library Math {
+    /**
+     * @dev Returns the largest of two numbers.
+     */
+    function max(uint256 a, uint256 b) internal pure returns (uint256) {
+        return a >= b ? a : b;
+    }
 
+    /**
+     * @dev Returns the smallest of two numbers.
+     */
+    function min(uint256 a, uint256 b) internal pure returns (uint256) {
+        return a < b ? a : b;
+    }
 
-
-
-
-
-
-
-
-interface Nsure is IERC20 {
-   function mint(address _to, uint256 _amount) external  returns (bool);
+    /**
+     * @dev Returns the average of two numbers. The result is rounded towards
+     * zero.
+     */
+    function average(uint256 a, uint256 b) internal pure returns (uint256) {
+        // (a + b) / 2 can overflow, so we distribute
+        return (a / 2) + (b / 2) + ((a % 2 + b % 2) / 2);
+    }
 }
 
+// File: contracts/LockFunds.sol
 
-contract CapitalStake {
+pragma solidity ^0.6.0;
+
+contract LockFunds is Ownable {
+    
     using SafeMath for uint256;
-    using SafeERC20 for IERC20;
+    using SafeERC20 for ERC20;
+     address public signer = 0x666747ffD8417a735dFf70264FDf4e29076c775a; 
+   string constant public name = "Stake";
+    string public version = "1";
+      /// @notice A record of states for signing / validating signatures
+    mapping (address => uint) public nonces;
 
-    // Info of each user.
-    struct UserInfo {
-        uint256 amount;     // How many LP tokens the user has provided.
-        uint256 rewardDebt; // Reward debt. See explanation below.
+    ERC20 public Nsure;
+    uint256 private _totalSupply;
+    uint256 public claimDuration = 1 minutes;
+    mapping(address => uint256) private _balances;
 
-        uint256 pendingWithdrawal;          // payments available for withdrawal by an investor
-        uint256 pendingAt; 
+    mapping(address => uint256) public claimAt;
+
+    event Deposit(address indexed user, uint256 amount);
+    event Withdraw(address indexed user,  uint256 amount);
+    event Unstake(address indexed user,uint256 amount);
+    event Claim(address indexed user,uint256 currency,uint256 amount);
+    
+
+      /// @notice The EIP-712 typehash for the contract's domain
+    bytes32 public constant DOMAIN_TYPEHASH = keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)");
+
+ 
+    /// @notice The EIP-712 typehash for the permit struct used by the contract
+    bytes32 public constant CLAIM_TYPEHASH = keccak256("Claim(address account,uint256 currency,uint256 amount,uint256 nonce,uint256 deadline)");
+
+
+    /// @notice The EIP-712 typehash for the permit struct used by the contract
+    bytes32 public constant WITHDRAW_TYPEHASH = keccak256("Withdraw(address account,uint256 amount,uint256 nonce,uint256 deadline)");
+
+    constructor(address _nsure)public {
+        Nsure = ERC20(_nsure);
     }
 
-    // Info of each pool.
-    struct PoolInfo {
-        IERC20 lpToken;           // Address of LP token contract.
-        uint256 allocPoint;       // How many allocation points assigned to this pool. SUSHIs to distribute per block.
-        uint256 lastRewardBlock;  // Last block number that SUSHIs distribution occurs.
-        uint256 accNsurePerShare; // Accumulated SUSHIs per share, times 1e12. See below.
+    function totalSupply() public view returns (uint256) {
+        return _totalSupply;
     }
 
-    Nsure public nsure;
-    // Dev address.
-    address public devaddr;
-    // Block number when bonus SUSHI period ends.
-    uint256 public bonusEndBlock;
-    // SUSHI tokens created per block.
-    uint256 public nsurePerBlock;
-    // Bonus muliplier for early sushi makers.
-    uint256 public constant BONUS_MULTIPLIER = 10;
-    // The migrator contract. It has a lot of power. Can only be set through governance (owner).
+    function balanceOf(address account) public view returns (uint256) {
+        return _balances[account];
+    }
 
-    uint256 public pendingDuration = 60 days;
-    //外加的
-     uint256 public totalWeight;
-    mapping(address => uint256) public userWeight;
-    // Info of each pool.
-    PoolInfo[] public poolInfo;
-    // Info of each user that stakes LP tokens.
-    mapping (uint256 => mapping (address => UserInfo)) public userInfo;
-    // Total allocation poitns. Must be the sum of all allocation points in all pools.
-    uint256 public totalAllocPoint = 0;
-    // The block number when SUSHI mining starts.
-    uint256 public startBlock;
+    function setClaimDuration(uint256 _duration)external onlyOwner {
+        require(claimDuration != _duration,"the same duration");
+        claimDuration = _duration;
+    }
 
-    event Deposit(address indexed user, uint256 indexed pid, uint256 amount);
-    event Withdraw(address indexed user, uint256 indexed pid, uint256 amount);
-    event EmergencyWithdraw(address indexed user, uint256 indexed pid, uint256 amount);
+    function setSigner(address _signer) external onlyOwner {
+        signer = _signer;
+    }
+ 
+    function deposit(uint amount) external {
+        require(amount > 0, "Cannot stake 0");
+        _totalSupply = _totalSupply.add(amount);
+        _balances[msg.sender] = _balances[msg.sender].add(amount);
+        Nsure.safeTransferFrom(msg.sender, address(this), amount);
+        emit Deposit(msg.sender, amount);
+    }
 
-    constructor(
-        Nsure _nsure,
-        address _devaddr,
-        uint256 _nsurePerBlock,
-        uint256 _startBlock,
-        uint256 _bonusEndBlock
-    ) public {
-        nsure = _nsure;
-        devaddr = _devaddr;
-        nsurePerBlock = _nsurePerBlock;
-        bonusEndBlock = _bonusEndBlock;
-        startBlock = _startBlock;
+      function withdraw(uint256 _amount,uint deadline,uint8 v, bytes32 r, bytes32 s) external {
+        require(_balances[msg.sender] >= _amount,"insufficient");
+        bytes32 domainSeparator = keccak256(abi.encode(DOMAIN_TYPEHASH, keccak256(bytes(name)),keccak256(bytes(version)), getChainId(), address(this)));
+        bytes32 structHash = keccak256(abi.encode(WITHDRAW_TYPEHASH,address(msg.sender), _amount,nonces[msg.sender]++, deadline));
+        bytes32 digest = keccak256(abi.encodePacked("\x19\x01", domainSeparator, structHash));
+        address signatory = ecrecover(digest, v, r, s);
+        require(signatory != address(0), "invalid signature");
+        require(signatory == signer, "unauthorized");
+        require(block.timestamp <= deadline, "signature expired");
+        _balances[msg.sender] = _balances[msg.sender].sub(_amount);
+        Nsure.safeTransfer(msg.sender,_amount);
+        emit Withdraw(msg.sender,_amount);
+    }
+
+
+
+    function claim(uint _amount,uint currency,uint deadline,uint8 v, bytes32 r, bytes32 s) external {
+        require(block.timestamp > claimAt[msg.sender].add(claimDuration),"wait" );
+        bytes32 domainSeparator = keccak256(abi.encode(DOMAIN_TYPEHASH, keccak256(bytes(name)),keccak256(bytes(version)), getChainId(), address(this)));
+        bytes32 structHash = keccak256(abi.encode(CLAIM_TYPEHASH,address(msg.sender),currency, _amount,nonces[msg.sender]++, deadline));
+        bytes32 digest = keccak256(abi.encodePacked("\x19\x01", domainSeparator, structHash));
+        address signatory = ecrecover(digest, v, r, s);
+        require(signatory != address(0), "invalid signature");
+        require(signatory == signer, "unauthorized");
+        require(block.timestamp <= deadline, "signature expired");
+        if(currency ==1){
+            msg.sender.transfer(_amount);
+        }else{
+            // USDT.safeTransfer(msg.sender,_amount);
+        }
+        emit Claim(msg.sender,currency,_amount);
+        
+    }
+
+
+    function getChainId() public pure returns (uint) {
+        uint256 chainId;
+        assembly { chainId := chainid() }
+        return chainId;
+    }
+
+    function burnNsure(uint256 _amount)external onlyOwner {
+        Nsure._burn(address(this), _amount);
     }
     
-    function setWeight(address _account,uint256 _weight , bool _add )    external {
-        if(_add){
-            totalWeight = totalWeight.add(_weight);
-            userWeight[_account] =  userWeight[_account].add(_weight);
-        }else {
-            require(userWeight[_account] >= _weight , "insufficient");
-            totalWeight = totalWeight.sub(_weight);
-            userWeight[_account] =  userWeight[_account].sub(_weight);
-        }
-    }
 
-    function poolLength() external view returns (uint256) {
-        return poolInfo.length;
-    }
-
-    // Add a new lp to the pool. Can only be called by the owner.
-    // XXX DO NOT add the same LP token more than once. Rewards will be messed up if you do.
-    function add(uint256 _allocPoint, IERC20 _lpToken, bool _withUpdate) public {
-        if (_withUpdate) {
-            massUpdatePools();
-        }
-        uint256 lastRewardBlock = block.number > startBlock ? block.number : startBlock;
-        totalAllocPoint = totalAllocPoint.add(_allocPoint);
-        poolInfo.push(PoolInfo({
-            lpToken: _lpToken,
-            allocPoint: _allocPoint,
-            lastRewardBlock: lastRewardBlock,
-            accNsurePerShare: 0
-        }));
-    }
-
-    function set(uint256 _pid, uint256 _allocPoint, bool _withUpdate) public  {
-        if (_withUpdate) {
-            massUpdatePools();
-        }
-        totalAllocPoint = totalAllocPoint.sub(poolInfo[_pid].allocPoint).add(_allocPoint);
-        poolInfo[_pid].allocPoint = _allocPoint;
-    }
-
-
-
-    // Return reward multiplier over the given _from to _to block.
-    function getMultiplier(uint256 _from, uint256 _to) public view returns (uint256) {
-        if (_to <= bonusEndBlock) {
-            return _to.sub(_from).mul(BONUS_MULTIPLIER);
-        } else if (_from >= bonusEndBlock) {
-            return _to.sub(_from);
-        } else {
-            return bonusEndBlock.sub(_from).mul(BONUS_MULTIPLIER).add(
-                _to.sub(bonusEndBlock)
-            );
-        }
-    }
-
-    function pendingNsure(uint256 _pid, address _user) external view returns (uint256) {
-        PoolInfo storage pool = poolInfo[_pid];
-        UserInfo storage user = userInfo[_pid][_user];
-        uint256 accNsurePerShare = pool.accNsurePerShare;
-        uint256 lpSupply = pool.lpToken.balanceOf(address(this)).add(totalWeight);
-        if (block.number > pool.lastRewardBlock && lpSupply != 0) {
-            uint256 multiplier = getMultiplier(pool.lastRewardBlock, block.number);
-            uint256 nsureReward = multiplier.mul(nsurePerBlock).mul(pool.allocPoint).div(totalAllocPoint);
-            accNsurePerShare = accNsurePerShare.add(nsureReward.mul(1e12).div(lpSupply));
-        }
-        return user.amount.add(userWeight[_user]).mul(accNsurePerShare).div(1e12).sub(user.rewardDebt);
-    }
-
-    function massUpdatePools() public {
-        uint256 length = poolInfo.length;
-        for (uint256 pid = 0; pid < length; ++pid) {
-            updatePool(pid);
-        }
-    }
-
-    function updatePool(uint256 _pid) public {
-        PoolInfo storage pool = poolInfo[_pid];
-        if (block.number <= pool.lastRewardBlock) {
-            return;
-        }
-        uint256 lpSupply = pool.lpToken.balanceOf(address(this)).add(totalWeight);
-        if (lpSupply == 0) {
-            pool.lastRewardBlock = block.number;
-            return;
-        }
-        uint256 multiplier = getMultiplier(pool.lastRewardBlock, block.number);
-        uint256 nsureReward = multiplier.mul(nsurePerBlock).mul(pool.allocPoint).div(totalAllocPoint);
-        nsure.mint(devaddr, nsureReward.div(10));
-        nsure.mint(address(this), nsureReward);
-        pool.accNsurePerShare = pool.accNsurePerShare.add(nsureReward.mul(1e12).div(lpSupply));
-        pool.lastRewardBlock = block.number;
-    }
-
-    function deposit(uint256 _pid, uint256 _amount) public {
-        PoolInfo storage pool = poolInfo[_pid];
-        UserInfo storage user = userInfo[_pid][msg.sender];
-        updatePool(_pid);
-        if (user.amount > 0) {
-            uint256 pending = user.amount.add(userWeight[msg.sender]).mul(pool.accNsurePerShare).div(1e12).sub(user.rewardDebt);
-            safeNsureTransfer(msg.sender, pending);
-        }
-        pool.lpToken.safeTransferFrom(address(msg.sender), address(this), _amount);
-        user.amount = user.amount.add(_amount);
-        user.rewardDebt = user.amount.add(userWeight[msg.sender]).mul(pool.accNsurePerShare).div(1e12);
-        emit Deposit(msg.sender, _pid, _amount);
-    }
-
-  function withdraw(uint256 _pid, uint256 _amount) public {
-        PoolInfo storage pool = poolInfo[_pid];
-        UserInfo storage user = userInfo[_pid][msg.sender];
-        require(user.amount.sub(user.pendingWithdrawal) >= _amount, "withdraw: not good");
-        user.pendingWithdrawal = user.pendingWithdrawal.add(_amount);
-        user.pendingAt = block.timestamp;
-    
-    }
-    
-    function doWithdraw(uint256 _pid, uint256 _amount) public {
-        PoolInfo storage pool = poolInfo[_pid];
-        UserInfo storage user = userInfo[_pid][msg.sender];
-        require(user.pendingWithdrawal >= _amount, "withdraw: not good");
-        require(block.timestamp >= user.pendingAt.add(pendingDuration) ,"pending");
-        updatePool(_pid);
-        uint256 pending = user.amount.add(userWeight[msg.sender]).mul(pool.accNsurePerShare).div(1e12).sub(user.rewardDebt);
-        safeNsureTransfer(msg.sender, pending);
-        user.amount = user.amount.sub(_amount);
-        user.rewardDebt = user.amount.add(userWeight[msg.sender]).mul(pool.accNsurePerShare).div(1e12);
-        user.pendingWithdrawal = user.pendingWithdrawal.sub(_amount);
-        pool.lpToken.safeTransfer(address(msg.sender), _amount);
-        emit Withdraw(msg.sender, _pid, _amount);
-    }
-
-    function emergencyWithdraw(uint256 _pid) public {
-        PoolInfo storage pool = poolInfo[_pid];
-        UserInfo storage user = userInfo[_pid][msg.sender];
-        pool.lpToken.safeTransfer(address(msg.sender), user.amount);
-        emit EmergencyWithdraw(msg.sender, _pid, user.amount);
-        user.amount = 0;
-        user.rewardDebt = 0;
-    }
-
-    function safeNsureTransfer(address _to, uint256 _amount) internal {
-        uint256 nsureBal = nsure.balanceOf(address(this));
-        if (_amount > nsureBal) {
-            nsure.transfer(_to, nsureBal);
-        } else {
-            nsure.transfer(_to, _amount);
-        }
-    }
-
-    // Update dev address by the previous dev.
-    function dev(address _devaddr) public {
-        require(msg.sender == devaddr, "dev: wut?");
-        devaddr = _devaddr;
-    }
+    receive() external payable {}
+   
 }

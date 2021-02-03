@@ -8,7 +8,7 @@ import "@openzeppelin/contracts/GSN/Context.sol";
 
 pragma solidity >= 0.6.0;
 
-contract Surplus is Ownable {
+contract Treasury is Ownable {
 
     receive() external payable {}
 
