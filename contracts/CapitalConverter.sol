@@ -23,8 +23,7 @@ contract CapitalConverter is ERC20, Ownable, Pausable, ReentrancyGuard {
         require(msg.sender == operator,"not operator");
         _;
     }
-    constructor(address _token, uint256 _tokenDecimal)
-        public  ERC20("name","symbol")
+    constructor(address _token, uint256 _tokenDecimal,string memory name,string memory symbol) public  ERC20(name,symbol)
     {
         token           = _token;
         tokenDecimal    = _tokenDecimal;

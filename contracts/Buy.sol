@@ -25,7 +25,6 @@ contract Buy is Ownable {
     /// @notice A record of states for signing / validating signatures
     mapping(address => uint256) public nonces;
 
-    // IProduct public _product;
     uint256 public orderIndex = 1000;
     uint256 public surplueRate = 40;
     uint256 public stakeRate = 50;
@@ -107,6 +106,7 @@ contract Buy is Ownable {
         for(uint256 i=0;i<divCurrencies.length;i++){
             if(divCurrencies[i]== currency){
                 delete divCurrencies[i];
+                break;
             }
         }
     }
