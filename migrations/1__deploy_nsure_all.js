@@ -1,10 +1,11 @@
-const Buy = artifacts.require("Buy"); //7
+// const Buy = artifacts.require("Buy"); //7
 // const Stake = artifacts.require("LockFunds"); //6
 // const CapitalStake = artifacts.require("CapitalStake"); //5
 // const CapitalExchange = artifacts.require("CapitalExchange"); //4
 // const Nsure = artifacts.require("Nsure"); //3
 // const Surplus = artifacts.require("Surplus"); //2
 // const Cover = artifacts.require("Product"); //1
+const ClaimPurchaseMint = artifacts.require('ClaimPurchaseMint');
 
 
 //0xa5a489D44db79E9E59E1A454EC3857cFe45B1F34
@@ -40,8 +41,13 @@ const Buy = artifacts.require("Buy"); //7
 // };
 
 // //0xfB2AeeEac92e9Af00ab0993472672bb16c65ffAE
-module.exports = function (deployer) { //address _stake,address _surplus,address _cover
-  deployer.deploy(Buy,'0xcC8f135Bb303e633b01C3a3e3762a4B085B089d6',
-  '0xA837C739e70294D080800C8DA6AB46266aB03737',
-  '0xa5a489D44db79E9E59E1A454EC3857cFe45B1F34');
-};
+// module.exports = function (deployer) { //address _stake,address _surplus,address _cover
+//   deployer.deploy(Buy,'0xcC8f135Bb303e633b01C3a3e3762a4B085B089d6',
+//   '0xA837C739e70294D080800C8DA6AB46266aB03737',
+//   '0xa5a489D44db79E9E59E1A454EC3857cFe45B1F34');
+// };
+
+
+module.exports = function (deployer){ //nsure
+  deployer.deploy(ClaimPurchaseMint,'0x6cf83f10234ac1db01baed7e45c52a59c9c66a3b')
+}

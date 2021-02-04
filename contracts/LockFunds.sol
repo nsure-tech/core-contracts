@@ -86,7 +86,7 @@ contract LockFunds is Ownable {
         signer = _signer;
     }
  
- function setOperator(address _operator) external onlyOwner {
+ function setOperator(address _operator) external onlyOwner {   
      operator = _operator;
  }
  function setDeadlineDuration(uint256 _duration) external onlyOwner {
@@ -169,7 +169,6 @@ function setDepositMax(uint256 _max) external onlyOwner{
         require(signatory != address(0), "invalid signature");
         require(signatory == signer, "unauthorized");
         require(block.timestamp <= deadline, "signature expired");
-
 
         IERC20(divCurrencies[currency].divCurrencie).safeTransfer(msg.sender,_amount);
 
