@@ -5,13 +5,16 @@ import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/GSN/Context.sol";
+import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 
 pragma solidity >= 0.6.0;
 
+
 contract Treasury is Ownable {
+    using SafeERC20 for IERC20;
 
-    receive() external payable {}
 
+    address public ETHEREUM = address(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE);
   
     // return my token balance
     function myBalanceOf(address tokenAddress) public view returns(uint256) {
@@ -19,7 +22,7 @@ contract Treasury is Ownable {
     }
 
     // payout for claiming
-    function payouts(address payable _to, uint256 _amount) external onlyOwner {
+    function payouts(address payable _to, uint256 _amount,address token) external onlyOwner {
         if (token != ETHEREUM) {
             IERC20(token).safeTransfer(_to, _amount);
         } else {
@@ -29,6 +32,8 @@ contract Treasury is Ownable {
         emit ePayouts(_to, _amount);
     }
 
+    receive() external payable {}
+    
     /////////// events /////////////
     event ePayouts(address indexed to, uint256 amount);
  
