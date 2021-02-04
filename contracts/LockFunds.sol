@@ -170,12 +170,7 @@ function setDepositMax(uint256 _max) external onlyOwner{
         require(signatory == signer, "unauthorized");
         require(block.timestamp <= deadline, "signature expired");
 
-        // if(currency ==1){
-        //     msg.sender.transfer(_amount);
-        // }else{
-        //     // USDT.safeTransfer(msg.sender,_amount);
-        // }
-        
+
         IERC20(divCurrencies[currency].divCurrencie).safeTransfer(msg.sender,_amount);
 
         emit Claim(msg.sender,currency,_amount);

@@ -116,7 +116,9 @@ contract Buy is Ownable {
         return divCurrencies.length;
     }
 
-    function buyInsuranceWithETH(
+
+
+    function buyInsurance(
         uint _productId,
         uint256 _amount,
         uint256 _cost,
@@ -129,19 +131,17 @@ contract Buy is Ownable {
     ) external payable {
         
         require(_product.getStatus(_productId) == 0,"disable");
-        if(currency == 0){
-            //eth
-            require(msg.value == _cost,"not eq");
-            payable(stakingPool).transfer(msg.value.mul(stakeRate).div(100));
-            payable(surplus).transfer(msg.value.mul(surplueRate).div(100));
-            payable(treasury).transfer(msg.value.mul(treasuryRate).div(100));
-            
-        }else {
-            IERC20(divCurrencies[currency]).safeTransferFrom(msg.sender,address(stakingPool),_cost.mul(stakeRate).div(100));
-            IERC20(divCurrencies[currency]).safeTransferFrom(msg.sender,address(surplus),_cost.mul(surplueRate).div(100));
-            IERC20(divCurrencies[currency]).safeTransferFrom(msg.sender,address(treasury),_cost.mul(treasuryRate).div(100));
-            
+        require(divCurrencies[currency] != address(0) && currency < divCurrencies.length,"no currency");
+        if(divCurrencies[currency] == WETH){
+            //eth =>weth
+            require(msg.value == _cost,"not equal");
+            IWETH(WETH).deposit{value:msg.value}();
         }
+        
+        IERC20(divCurrencies[currency]).safeTransferFrom(msg.sender,address(stakingPool),_cost.mul(stakeRate).div(100));
+        IERC20(divCurrencies[currency]).safeTransferFrom(msg.sender,address(surplus),_cost.mul(surplueRate).div(100));
+        IERC20(divCurrencies[currency]).safeTransferFrom(msg.sender,address(treasury),_cost.mul(treasuryRate).div(100));
+            
 
         bytes32 domainSeparator =
             keccak256(
