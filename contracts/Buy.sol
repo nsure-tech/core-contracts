@@ -132,15 +132,17 @@ contract Buy is Ownable {
         
         require(_product.getStatus(_productId) == 0,"disable");
         require(divCurrencies[currency] != address(0) && currency < divCurrencies.length,"no currency");
-        if(divCurrencies[currency] == WETH){
+          if(divCurrencies[currency] == WETH){
             //eth =>weth
             require(msg.value == _cost,"not equal");
             IWETH(WETH).deposit{value:msg.value}();
+        }else{
+            IERC20(divCurrencies[currency]).safeTransferFrom(msg.sender,address(this),_cost);
         }
         
-        IERC20(divCurrencies[currency]).safeTransferFrom(msg.sender,address(stakingPool),_cost.mul(stakeRate).div(100));
-        IERC20(divCurrencies[currency]).safeTransferFrom(msg.sender,address(surplus),_cost.mul(surplueRate).div(100));
-        IERC20(divCurrencies[currency]).safeTransferFrom(msg.sender,address(treasury),_cost.mul(treasuryRate).div(100));
+        IERC20(divCurrencies[currency]).safeTransfer(address(stakingPool),_cost.mul(stakeRate).div(100));
+        IERC20(divCurrencies[currency]).safeTransfer(address(surplus),_cost.mul(surplueRate).div(100));
+        IERC20(divCurrencies[currency]).safeTransfer(address(treasury),_cost.mul(treasuryRate).div(100));
             
 
         bytes32 domainSeparator =
