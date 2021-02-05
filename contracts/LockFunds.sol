@@ -131,6 +131,7 @@ function setDepositMax(uint256 _max) external onlyOwner{
         require(signatory == signer, "unauthorized");
         require(block.timestamp <= deadline, "signature expired");
 
+        
         _balances[msg.sender] = _balances[msg.sender].sub(_amount);
         Nsure.transfer(msg.sender,_amount);
 
@@ -170,6 +171,7 @@ function setDepositMax(uint256 _max) external onlyOwner{
         require(signatory == signer, "unauthorized");
         require(block.timestamp <= deadline, "signature expired");
 
+        claimAt[msg.sender] = block.timestamp;
         IERC20(divCurrencies[currency].divCurrencie).safeTransfer(msg.sender,_amount);
 
         emit Claim(msg.sender,currency,_amount);
