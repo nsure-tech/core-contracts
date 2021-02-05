@@ -1,4 +1,10 @@
+/**
+ * @dev a contract for defining product basic information.
+ *   
+ * @notice  more info need to be defined in the backend system.
+ */
 
+ 
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
@@ -25,9 +31,10 @@ contract Product is Ownable {
         return _products[_productId];
     }
 
-function getStatus(uint _productId) external view returns (uint) {
-    return _products[_productId].status;
-}
+    function getStatus(uint _productId) external view returns (uint) {
+        return _products[_productId].status;
+    }
+
     function addProduct(uint _productId, uint _status) public onlyOwner  {
         for(uint256 i=0;i<productId.length;i++){
             if(productId[i] == _productId){
@@ -59,8 +66,6 @@ function getStatus(uint _productId) external view returns (uint) {
         emit UpdateStatus(_productId,_status);
     }
     
-
-
 
     event UpdateStatus(uint  product,uint256 status);
     event DeleteProduct(uint  product);

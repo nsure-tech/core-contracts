@@ -1,3 +1,10 @@
+/**
+ * @dev a contract for convert eth to nETH or token to nToken.
+ *   
+ * @notice  there would be a ratio between Token and nToken when emit a claim event.
+ */
+
+
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
@@ -13,16 +20,12 @@ contract CapitalConverter is ERC20, Ownable, Pausable, ReentrancyGuard {
 
     address public ETHEREUM = address(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE);
 
-    uint256 public maxConvert = 100e18;
+    uint256 public maxConvert = 1000e18;
     address public token;
     uint256 public tokenDecimal;
 
     address public operator;
 
-    modifier onlyOperator(){
-        require(msg.sender == operator,"not operator");
-        _;
-    }
     constructor(address _token, uint256 _tokenDecimal,string memory name,string memory symbol) public  ERC20(name,symbol)
     {
         token           = _token;
@@ -55,7 +58,8 @@ contract CapitalConverter is ERC20, Ownable, Pausable, ReentrancyGuard {
     // convert ETH or USDx to nETH/nUSDx
     function convert(uint256 _amount) public payable nonReentrant whenNotPaused {
         require(_amount > 0, "CapitalConverter: Cannot stake 0.");
-        require(_amount <= maxConvert,"too much");
+        require(_amount <= maxConvert, "too much");
+
         if (token != ETHEREUM) {
             require(msg.value == 0, "CapitalConverter: Should not allow ETH deposits.");
             IERC20(token).safeTransferFrom(_msgSender(), address(this), _amount);
@@ -95,6 +99,19 @@ contract CapitalConverter is ERC20, Ownable, Pausable, ReentrancyGuard {
         }
 
         emit ePayouts(_to, _amount);
+    }
+
+    modifier onlyOperator(){
+        require(msg.sender == operator, "not operator");
+        _;
+    }
+
+    function setOperator(address _operator) external onlyOwner {
+        operator = _operator;
+    }
+
+    function setMaxConvert(uint256 _max) external onlyOwner {
+        maxConvert = _max;
     }
 
 

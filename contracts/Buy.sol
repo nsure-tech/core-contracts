@@ -117,26 +117,26 @@ contract Buy is Ownable {
     }
 
 
-
     function buyInsurance(
-        uint _productId,
-        uint256 _amount,
-        uint256 _cost,
-        uint256 period,
-        uint8 v,
-        bytes32 r,
-        bytes32 s,
-        uint256 deadline,
-        uint256 currency
-    ) external payable {
-        
-        require(_product.getStatus(_productId) == 0,"disable");
-        require(divCurrencies[currency] != address(0) && currency < divCurrencies.length,"no currency");
-          if(divCurrencies[currency] == WETH){
+            uint _productId,
+            uint256 _amount,
+            uint256 _cost,
+            uint256 period,
+            uint8 v,
+            bytes32 r,
+            bytes32 s,
+            uint256 deadline,
+            uint256 currency
+        ) external payable 
+    {
+        require(_product.getStatus(_productId) == 0, "disable");
+        require(divCurrencies[currency] != address(0) && currency < divCurrencies.length, "no currency");
+
+        if(divCurrencies[currency] == WETH) {
             //eth =>weth
             require(msg.value == _cost,"not equal");
-            IWETH(WETH).deposit{value:msg.value}();
-        }else{
+            IWETH(WETH).deposit{value: msg.value}();
+        } else {
             IERC20(divCurrencies[currency]).safeTransferFrom(msg.sender,address(this),_cost);
         }
         
@@ -183,13 +183,13 @@ contract Buy is Ownable {
         orderIndex++;
 
         _order.buyer    = _msgSender();
-        _order.currency =currency;
-        _order.productId = _productId;
-        _order.premium = _cost;
-        _order.amount = _amount;
+        _order.currency = currency;
+        _order.productId= _productId;
+        _order.premium  = _cost;
+        _order.amount   = _amount;
         _order.createAt = block.timestamp;
-        _order.period = period;
-        _order.state = 0;
+        _order.period   = period;
+        _order.state    = 0;
 
         emit NewOrder(
             _order

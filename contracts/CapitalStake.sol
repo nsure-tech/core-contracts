@@ -1,3 +1,6 @@
+/**
+ * @dev Capital mining contract. Need stake here to earn rewards after converting to nTokens.
+ */
 
 pragma solidity ^0.6.0;
 

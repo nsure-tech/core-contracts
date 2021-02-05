@@ -1,12 +1,13 @@
+/**
+ * @author  Nsure.Network <contact@nsure.network>
+ *
+ * @dev     A contract for claiming purchase cover rewards.
+ */
 
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+
 import "@openzeppelin/contracts/math/SafeMath.sol";
-import "@openzeppelin/contracts/utils/Address.sol";
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/GSN/Context.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
-import "@openzeppelin/contracts/utils/EnumerableSet.sol";
 import "@openzeppelin/contracts/math/Math.sol";
 import "./interfaces/INsure.sol";
 
@@ -30,23 +31,19 @@ contract ClaimPurchaseMint is Ownable {
 
     INsure public Nsure;
     uint256 private _totalSupply;
-    uint256 public claimDuration = 1 minutes;
+    uint256 public claimDuration = 60 minutes;
 
     mapping(address => uint256) private _balances;
     mapping(address => uint256) public claimAt;
 
-
     event Claim(address indexed user,uint256 amount);
-   
  
 
-      /// @notice The EIP-712 typehash for the contract's domain
+    /// @notice The EIP-712 typehash for the contract's domain
     bytes32 public constant DOMAIN_TYPEHASH = keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)");
-
  
     /// @notice The EIP-712 typehash for the permit struct used by the contract
     bytes32 public constant CLAIM_TYPEHASH = keccak256("Claim(address account,uint256 amount,uint256 nonce,uint256 deadline)");
-
 
 
     constructor(address _nsure)public {
@@ -70,33 +67,33 @@ contract ClaimPurchaseMint is Ownable {
         signer = _signer;
     }
 
- function setDeadlineDuration(uint256 _duration) external onlyOwner {
-     deadlineDuration = _duration;
- }
-
-  
+    function setDeadlineDuration(uint256 _duration) external onlyOwner {
+        deadlineDuration = _duration;
+    }
 
 
+    // claim rewards of purchase rewards
+    function claim(uint _amount, uint deadline, uint8 v, bytes32 r, bytes32 s) external {
+        require(block.timestamp > claimAt[msg.sender].add(claimDuration), "wait" );
+        require(block.timestamp.add(deadlineDuration) > deadline, "expired");
 
-    function claim(uint _amount,uint deadline,uint8 v, bytes32 r, bytes32 s) external {
-        require(block.timestamp > claimAt[msg.sender].add(claimDuration),"wait" );
-        require(block.timestamp.add(deadlineDuration) > deadline,"expired");
-        bytes32 domainSeparator = keccak256(abi.encode(DOMAIN_TYPEHASH, keccak256(bytes(name)),keccak256(bytes(version)), getChainId(), address(this)));
-        bytes32 structHash = keccak256(abi.encode(CLAIM_TYPEHASH,address(msg.sender), _amount,nonces[msg.sender]++, deadline));
-        bytes32 digest = keccak256(abi.encodePacked("\x19\x01", domainSeparator, structHash));
-        address signatory = ecrecover(digest, v, r, s);
+        bytes32 domainSeparator =   keccak256(abi.encode(DOMAIN_TYPEHASH, keccak256(bytes(name)),
+                                    keccak256(bytes(version)), getChainId(), address(this)));
+        bytes32 structHash =        keccak256(abi.encode(CLAIM_TYPEHASH,address(msg.sender), 
+                                    _amount,nonces[msg.sender]++, deadline));
+
+        bytes32 digest      = keccak256(abi.encodePacked("\x19\x01", domainSeparator, structHash));
+        address signatory   = ecrecover(digest, v, r, s);
 
         require(signatory != address(0), "invalid signature");
         require(signatory == signer, "unauthorized");
         require(block.timestamp <= deadline, "signature expired");
 
         claimAt[msg.sender] = block.timestamp;
-        Nsure.transfer(msg.sender,_amount);
+        Nsure.transfer(msg.sender, _amount);
 
         emit Claim(msg.sender,_amount);
     }
-
-
 
     function getChainId() public pure returns (uint) {
         uint256 chainId;
@@ -104,7 +101,4 @@ contract ClaimPurchaseMint is Ownable {
         return chainId;
     }
 
- 
-
-   
 }

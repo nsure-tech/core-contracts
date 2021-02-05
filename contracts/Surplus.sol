@@ -1,4 +1,11 @@
 
+/**
+ * @dev Surplus Pool which just does receive/payout things.
+ *
+ * @dev A ratio(commonly would be 40%) of the cover cost would be sent to surplus pool for claiming.
+ */
+
+
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
@@ -13,13 +20,15 @@ contract Surplus is Ownable {
  
     address public ETHEREUM = address(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE);
   
+    address public operator;
+
     // return my token balance
     function myBalanceOf(address tokenAddress) public view returns(uint256) {
         return IERC20(tokenAddress).balanceOf(address(this));
     }
 
     // payout for claiming
-    function payouts(address payable _to, uint256 _amount,address token) external onlyOwner {
+    function payouts(address payable _to, uint256 _amount,address token) external onlyOperator {
         if (token != ETHEREUM) {
             IERC20(token).safeTransfer(_to, _amount);
         } else {
@@ -29,8 +38,17 @@ contract Surplus is Ownable {
         emit ePayouts(_to, _amount);
     }
 
-       receive() external payable {}
+    receive() external payable {}
     
+
+    function setOperator(address _operator) external onlyOwner {   
+        operator = _operator;
+    }
+
+    modifier onlyOperator() {
+        require(msg.sender == operator,"not operator");
+        _;
+    }
 
     /////////// events /////////////
     event ePayouts(address indexed to, uint256 amount);

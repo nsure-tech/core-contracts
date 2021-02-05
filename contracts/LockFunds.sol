@@ -1,3 +1,10 @@
+/**
+ * @dev     a contract for locking Nsure Token to be an underwriter.
+ *   
+ * @notice  the underwriter program would be calculated and recorded by central ways
+            which is too complicated for contracts(gas used etc.)
+ */
+
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
@@ -86,12 +93,13 @@ contract LockFunds is Ownable {
         signer = _signer;
     }
  
- function setOperator(address _operator) external onlyOwner {   
-     operator = _operator;
- }
- function setDeadlineDuration(uint256 _duration) external onlyOwner {
-     deadlineDuration = _duration;
- }
+    function setOperator(address _operator) external onlyOwner {   
+        operator = _operator;
+    }
+
+    function setDeadlineDuration(uint256 _duration) external onlyOwner {
+        deadlineDuration = _duration;
+    }
  
     function getDivCurrencyLength() public view returns (uint256) {
         return divCurrencies.length;
@@ -102,15 +110,14 @@ contract LockFunds is Ownable {
         divCurrencies.push(DivCurrencie({divCurrencie:_currency,limit:_limit}));
     }
 
-  
-
-function setDepositMax(uint256 _max) external onlyOwner{
-    depositMax = _max;
-}
+    function setDepositMax(uint256 _max) external onlyOwner {
+        depositMax = _max;
+    }
 
     function deposit(uint amount) external {
         require(amount > 0, "Cannot stake 0");
         require(amount <= depositMax,"too much");
+
         _totalSupply = _totalSupply.add(amount);
         _balances[msg.sender] = _balances[msg.sender].add(amount);
 
@@ -139,31 +146,30 @@ function setDepositMax(uint256 _max) external onlyOwner{
     }
 
     // burn 1/2 for claiming 
-    function burnOuts(address[] memory _burnUsers, uint256[] memory _amounts) external onlyOperator {
-        // for循环执行下述命令
-        require(_burnUsers.length == _amounts.length,"not equal");
-        for(uint256 i = 0;i<_burnUsers.length;i++){
-            require(_balances[_burnUsers[i]] >= _amounts[i],"insufficient");
+    function burnOuts(address[] memory _burnUsers, uint256[] memory _amounts) 
+        external onlyOperator 
+    {
+        require(_burnUsers.length == _amounts.length, "not equal");
+
+        for(uint256 i = 0; i<_burnUsers.length; i++) {
+            require(_balances[_burnUsers[i]] >= _amounts[i], "insufficient");
+
             Nsure.burn(_amounts[i]);
             _balances[_burnUsers[i]] = _balances[_burnUsers[i]].sub(_amounts[i]);
+
             emit Burn(_burnUsers[i],_amounts[i]);
         }
-        
-        // 0. require检查
-
-        // 1. 销毁该合约对应金额
-
-        // 2. 减少该用户的amount
-
-        // 3. 触发事件
     }
 
-    function claim(uint _amount,uint currency,uint deadline,uint8 v, bytes32 r, bytes32 s) external {
-        require(block.timestamp > claimAt[msg.sender].add(claimDuration),"wait" );
-        require(block.timestamp.add(deadlineDuration) > deadline,"expired");
-        require(_amount <= divCurrencies[currency].limit,"too much");
+    function claim(uint _amount, uint currency, uint deadline, uint8 v, bytes32 r, bytes32 s)
+        external
+    {
+        require(block.timestamp > claimAt[msg.sender].add(claimDuration), "wait" );
+        require(block.timestamp.add(deadlineDuration) > deadline, "expired");
+        require(_amount <= divCurrencies[currency].limit, "too much");
+
         bytes32 domainSeparator = keccak256(abi.encode(DOMAIN_TYPEHASH, keccak256(bytes(name)),keccak256(bytes(version)), getChainId(), address(this)));
-        bytes32 structHash = keccak256(abi.encode(CLAIM_TYPEHASH,address(msg.sender),currency, _amount,nonces[msg.sender]++, deadline));
+        bytes32 structHash = keccak256(abi.encode(CLAIM_TYPEHASH,address(msg.sender), currency, _amount,nonces[msg.sender]++, deadline));
         bytes32 digest = keccak256(abi.encodePacked("\x19\x01", domainSeparator, structHash));
         address signatory = ecrecover(digest, v, r, s);
 
@@ -177,15 +183,12 @@ function setDepositMax(uint256 _max) external onlyOwner{
         emit Claim(msg.sender,currency,_amount);
     }
 
-
-
     function getChainId() public pure returns (uint) {
         uint256 chainId;
         assembly { chainId := chainid() }
         return chainId;
     }
 
- 
 
     receive() external payable {}
    
