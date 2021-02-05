@@ -1,18 +1,4 @@
 
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/math/SafeMath.sol";
-import "@openzeppelin/contracts/utils/Address.sol";
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/GSN/Context.sol";
-import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
-import "@openzeppelin/contracts/utils/EnumerableSet.sol";
-import "@openzeppelin/contracts/math/Math.sol";
-import "./interfaces/INsure.sol";
-
-pragma solidity ^0.6.0;
-
-
 contract ClaimPurchaseMint is Ownable {
     
     using SafeMath for uint256;
@@ -90,8 +76,10 @@ contract ClaimPurchaseMint is Ownable {
         require(signatory == signer, "unauthorized");
         require(block.timestamp <= deadline, "signature expired");
 
+
+
         claimAt[msg.sender] = block.timestamp;
-        Nsure.transfer(msg.sender,_amount);
+        Nsure.mint(msg.sender, _amount);
 
         emit Claim(msg.sender,_amount);
     }
