@@ -22,6 +22,8 @@ contract ClaimPurchaseMint is Ownable {
     address public signer = 0x666747ffD8417a735dFf70264FDf4e29076c775a; 
     string constant public name = "Claim";
     string public version = "1";
+
+    uint256 public nsurePerBlock    = 2 * 1e17;
     
     uint256 public deadlineDuration = 30 minutes;
     
@@ -32,6 +34,7 @@ contract ClaimPurchaseMint is Ownable {
     INsure public Nsure;
     uint256 private _totalSupply;
     uint256 public claimDuration = 60 minutes;
+    uint256 lastRewardBlock;
 
     mapping(address => uint256) private _balances;
     mapping(address => uint256) public claimAt;
@@ -46,8 +49,10 @@ contract ClaimPurchaseMint is Ownable {
     bytes32 public constant CLAIM_TYPEHASH = keccak256("Claim(address account,uint256 amount,uint256 nonce,uint256 deadline)");
 
 
-    constructor(address _nsure)public {
+    constructor(address _nsure, uint256 startBlock) public {
         Nsure = INsure(_nsure);
+
+        lastRewardBlock = block.number > startBlock ? block.number : startBlock;
     }
 
     function totalSupply() public view returns (uint256) {
@@ -71,11 +76,26 @@ contract ClaimPurchaseMint is Ownable {
         deadlineDuration = _duration;
     }
 
+    function updateBlockReward(uint256 _newReward) external onlyOwner {
+        nsurePerBlock   = _newReward;
+    }
+
+    function mintPurchaseNsure() internal {
+        if (block.number <= lastRewardBlock || nsureReward <= 0) {
+            return;
+        }
+
+        uint256 nsureReward = nsurePerBlock.mul(block.number.sub(lastRewardBlock));
+        Nsure.mint(address(this), nsureReward);
+    }
 
     // claim rewards of purchase rewards
     function claim(uint _amount, uint deadline, uint8 v, bytes32 r, bytes32 s) external {
         require(block.timestamp > claimAt[msg.sender].add(claimDuration), "wait" );
         require(block.timestamp.add(deadlineDuration) > deadline, "expired");
+
+        // mint nsure to address(this) first.
+        mintPurchaseNsure();
 
         bytes32 domainSeparator =   keccak256(abi.encode(DOMAIN_TYPEHASH, keccak256(bytes(name)),
                                     keccak256(bytes(version)), getChainId(), address(this)));
@@ -92,7 +112,7 @@ contract ClaimPurchaseMint is Ownable {
         claimAt[msg.sender] = block.timestamp;
         Nsure.transfer(msg.sender, _amount);
 
-        emit Claim(msg.sender,_amount);
+        emit Claim(msg.sender, _amount);
     }
 
     function getChainId() public pure returns (uint) {
