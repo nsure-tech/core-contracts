@@ -81,7 +81,7 @@ contract ClaimPurchaseMint is Ownable {
     }
 
     function mintPurchaseNsure() internal {
-        if (block.number <= lastRewardBlock || nsureReward <= 0) {
+        if (block.number <= lastRewardBlock) {
             return;
         }
 

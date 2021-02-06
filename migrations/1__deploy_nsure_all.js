@@ -5,7 +5,7 @@
 // const Nsure = artifacts.require("Nsure"); //3
 // const Surplus = artifacts.require("Surplus"); //2
 // const Cover = artifacts.require("Product"); //1
-const ClaimPurchaseMint = artifacts.require('ClaimPurchaseMint');
+const ClaimPurchaseMint = artifacts.require('ClaimPurchaseMint'); //0
 
 
 //0xa5a489D44db79E9E59E1A454EC3857cFe45B1F34
@@ -51,3 +51,6 @@ const ClaimPurchaseMint = artifacts.require('ClaimPurchaseMint');
 module.exports = function (deployer){ //nsure
   deployer.deploy(ClaimPurchaseMint,'0x6cf83f10234ac1db01baed7e45c52a59c9c66a3b')
 }
+
+
+//weth 0x19eA6711FBB2BD8302C2ae612eA6718abdada893
