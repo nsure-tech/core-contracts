@@ -65,6 +65,7 @@ contract ClaimPurchaseMint is Ownable {
 
     function setClaimDuration(uint256 _duration)external onlyOwner {
         require(claimDuration != _duration, "the same duration");
+
         claimDuration = _duration;
     }
 
@@ -98,9 +99,9 @@ contract ClaimPurchaseMint is Ownable {
         mintPurchaseNsure();
 
         bytes32 domainSeparator =   keccak256(abi.encode(DOMAIN_TYPEHASH, keccak256(bytes(name)),
-                                    keccak256(bytes(version)), getChainId(), address(this)));
+                                        keccak256(bytes(version)), getChainId(), address(this)));
         bytes32 structHash =        keccak256(abi.encode(CLAIM_TYPEHASH,address(msg.sender), 
-                                    _amount,nonces[msg.sender]++, deadline));
+                                        _amount,nonces[msg.sender]++, deadline));
 
         bytes32 digest      = keccak256(abi.encodePacked("\x19\x01", domainSeparator, structHash));
         address signatory   = ecrecover(digest, v, r, s);
@@ -120,5 +121,4 @@ contract ClaimPurchaseMint is Ownable {
         assembly { chainId := chainid() }
         return chainId;
     }
-
 }

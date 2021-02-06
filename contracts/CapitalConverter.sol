@@ -101,7 +101,7 @@ contract CapitalConverter is ERC20, Ownable, Pausable, ReentrancyGuard {
         emit ePayouts(_to, _amount);
     }
 
-    modifier onlyOperator(){
+    modifier onlyOperator() {
         require(msg.sender == operator, "not operator");
         _;
     }

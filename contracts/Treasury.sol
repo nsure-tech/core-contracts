@@ -27,7 +27,7 @@ contract Treasury is Ownable {
   
 
     // payout for claiming
-    function payouts(address payable _to, uint256 _amount,address token) external onlyOperator {
+    function payouts(address payable _to, uint256 _amount, address token) external onlyOperator {
         if (token != ETHEREUM) {
             IERC20(token).safeTransfer(_to, _amount);
         } else {

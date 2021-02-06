@@ -98,7 +98,7 @@ contract Buy is Ownable {
     }
 
 
-  function addDivCurrency(address currency) public onlyOwner {
+    function addDivCurrency(address currency) public onlyOwner {
         divCurrencies.push(currency);
     }
 
@@ -127,7 +127,7 @@ contract Buy is Ownable {
             bytes32 s,
             uint256 deadline,
             uint256 currency
-        ) external payable 
+        ) external payable
     {
         require(_product.getStatus(_productId) == 0, "disable");
         require(divCurrencies[currency] != address(0) && currency < divCurrencies.length, "no currency");
@@ -137,14 +137,13 @@ contract Buy is Ownable {
             require(msg.value == _cost,"not equal");
             IWETH(WETH).deposit{value: msg.value}();
         } else {
-            IERC20(divCurrencies[currency]).safeTransferFrom(msg.sender,address(this),_cost);
+            IERC20(divCurrencies[currency]).safeTransferFrom(msg.sender,address(this), _cost);
         }
         
-        IERC20(divCurrencies[currency]).safeTransfer(address(stakingPool),_cost.mul(stakeRate).div(100));
-        IERC20(divCurrencies[currency]).safeTransfer(address(surplus),_cost.mul(surplueRate).div(100));
-        IERC20(divCurrencies[currency]).safeTransfer(address(treasury),_cost.mul(treasuryRate).div(100));
-            
-
+        IERC20(divCurrencies[currency]).safeTransfer(address(stakingPool), _cost.mul(stakeRate).div(100));
+        IERC20(divCurrencies[currency]).safeTransfer(address(surplus), _cost.mul(surplueRate).div(100));
+        IERC20(divCurrencies[currency]).safeTransfer(address(treasury), _cost.mul(treasuryRate).div(100));
+        
         bytes32 domainSeparator =
             keccak256(
                 abi.encode(

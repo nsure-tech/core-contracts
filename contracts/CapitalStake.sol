@@ -11,11 +11,10 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/GSN/Context.sol";
 import "@openzeppelin/contracts/utils/Pausable.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
+import "./interfaces/INsure.sol";
 
-interface Nsure is IERC20 {
-   function mint(address _to, uint256 _amount) external  returns (bool);
-}
 
 contract CapitalStake is Ownable, Pausable {
     using SafeMath for uint256;
@@ -40,11 +39,10 @@ contract CapitalStake is Ownable, Pausable {
         uint256 accNsurePerShare;
     }
  
-    Nsure public nsure;
+    INsure public nsure;
     uint256 public nsurePerBlock    = 18 * 1e17;
 
-    uint256 public pendingDuration  = 60 minutes;    // for test
-
+    uint256 public pendingDuration  = 14 days;
 
 
     // Info of each pool.
@@ -59,7 +57,7 @@ contract CapitalStake is Ownable, Pausable {
     uint256 public startBlock;
 
     constructor(address _nsure, uint256 _startBlock) public {
-        nsure       = Nsure(_nsure);
+        nsure       = INsure(_nsure);
         startBlock  = _startBlock;
     }
     
@@ -77,7 +75,6 @@ contract CapitalStake is Ownable, Pausable {
     }
 
     // Add a new lp to the pool. Can only be called by the owner.
-    // XXX DO NOT add the same LP token more than once. Rewards will be messed up if you do.
     function add(uint256 _allocPoint, IERC20 _lpToken, bool _withUpdate) onlyOwner public {
         for(uint256 i=0; i<poolLength(); i++) {
             require(address(_lpToken) != address(poolInfo[i].lpToken), "Duplicate Token!");
@@ -148,10 +145,11 @@ contract CapitalStake is Ownable, Pausable {
         uint256 multiplier = getMultiplier(pool.lastRewardBlock, block.number);
         uint256 nsureReward = multiplier.mul(nsurePerBlock).mul(pool.allocPoint).div(totalAllocPoint);
 
-        nsure.mint(address(this), nsureReward);
-
-        pool.accNsurePerShare = pool.accNsurePerShare.add(nsureReward.mul(1e12).div(lpSupply));
-        pool.lastRewardBlock = block.number;
+        bool mintRet = nsure.mint(address(this), nsureReward);
+        if(mintRet) {
+            pool.accNsurePerShare = pool.accNsurePerShare.add(nsureReward.mul(1e12).div(lpSupply));
+            pool.lastRewardBlock = block.number;
+        }
     }
 
 
@@ -175,24 +173,22 @@ contract CapitalStake is Ownable, Pausable {
     }
 
 
-
-
-    // pending
+    // unstake, need pending sometime
     function unstake(uint256 _pid,uint256 _amount) public whenNotPaused {
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][msg.sender];
 
         require(user.amount >= _amount, "unstake: not good");
+
         updatePool(_pid);
         uint256 pending = user.amount.mul(pool.accNsurePerShare).div(1e12).sub(user.rewardDebt);
         safeNsureTransfer(msg.sender, pending);
 
-        user.amount = user.amount.sub(_amount);
+        user.amount     = user.amount.sub(_amount);
         user.rewardDebt = user.amount.mul(pool.accNsurePerShare).div(1e12);
 
-        
+        user.pendingAt  = block.timestamp;
         user.pendingWithdrawal = user.pendingWithdrawal.add(_amount);
-        user.pendingAt = block.timestamp;
 
         emit Unstake(msg.sender,_pid,_amount);
     }
@@ -207,20 +203,22 @@ contract CapitalStake is Ownable, Pausable {
         return (true,user.pendingAt.add(pendingDuration).sub(block.timestamp));
     }
     
+    // when it's pending while a claim occurs, the value of the withdrawal will decrease as usual
+    // so we keep the claim function by this tool.
     function withdraw(uint256 _pid) public whenNotPaused {
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][msg.sender];
 
-        require(block.timestamp >= user.pendingAt.add(pendingDuration) ,"still pending");
+        require(block.timestamp >= user.pendingAt.add(pendingDuration), "still pending");
 
-        uint256 amount = user.pendingWithdrawal;
-        user.pendingWithdrawal = 0;
+        uint256 amount          = user.pendingWithdrawal;
+        pool.amount             = pool.amount.sub(amount);
         pool.lpToken.safeTransfer(address(msg.sender), amount);
-        pool.amount = pool.amount.sub(amount);
-        
-        emit Withdraw(msg.sender, _pid,amount);
-    }
 
+        user.pendingWithdrawal  = 0;
+        
+        emit Withdraw(msg.sender, _pid, amount);
+    }
 
     //claim reward
     function claim(uint256 _pid) external whenNotPaused {
@@ -237,18 +235,18 @@ contract CapitalStake is Ownable, Pausable {
         emit Claim(msg.sender, _pid, pending);
     }
 
-    function emergencyWithdraw(uint256 _pid) public {
-        PoolInfo storage pool = poolInfo[_pid];
-        UserInfo storage user = userInfo[_pid][msg.sender];
-        pool.lpToken.safeTransfer(address(msg.sender), user.amount);
+    // we don't support this function due to the claim process..
+    // or guys will step over the claim events via this function. 
+    // function emergencyWithdraw(uint256 _pid) public {
+    //     PoolInfo storage pool = poolInfo[_pid];
+    //     UserInfo storage user = userInfo[_pid][msg.sender];
+    //     pool.lpToken.safeTransfer(address(msg.sender), user.amount);
 
-        emit EmergencyWithdraw(msg.sender, _pid, user.amount);
+    //     emit EmergencyWithdraw(msg.sender, _pid, user.amount);
 
-        user.amount = 0;
-        user.rewardDebt = 0;
-
-       
-    }
+    //     user.amount = 0;
+    //     user.rewardDebt = 0;
+    // }
 
     function safeNsureTransfer(address _to, uint256 _amount) internal {
         uint256 nsureBal = nsure.balanceOf(address(this));
@@ -259,10 +257,12 @@ contract CapitalStake is Ownable, Pausable {
         }
     }
     
+
+    ////////////  event definitions  ////////////
     event Claim(address indexed user,uint256 pid,uint256 amount);
     event Deposit(address indexed user, uint256 indexed pid, uint256 amount);
     event Withdraw(address indexed user, uint256 indexed pid, uint256 amount);
-    event EmergencyWithdraw(address indexed user, uint256 indexed pid, uint256 amount);
     event Unstake(address indexed user,uint256 pid, uint256 amount);
- 
+
+    // event EmergencyWithdraw(address indexed user, uint256 indexed pid, uint256 amount);
 }

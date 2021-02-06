@@ -22,6 +22,13 @@ contract Product is Ownable {
     uint256[] public productId;
     mapping (uint => Product) private _products;
 
+    address public operator;
+
+    modifier onlyOperator() {
+        require(msg.sender == operator,"not operator");
+        _;
+    }
+
     function getLength() public view returns (uint) {
         return productId.length;
     }
@@ -35,7 +42,7 @@ contract Product is Ownable {
         return _products[_productId].status;
     }
 
-    function addProduct(uint _productId, uint _status) public onlyOwner  {
+    function addProduct(uint _productId, uint _status) public onlyOperator  {
         for(uint256 i=0;i<productId.length;i++){
             if(productId[i] == _productId){
                 return;
@@ -47,7 +54,7 @@ contract Product is Ownable {
         emit AddProduct(_productId,_status);
     }
 
-    function deleteProduct(uint _productId) public onlyOwner {
+    function deleteProduct(uint _productId) public onlyOperator {
         delete _products[_productId];
         
         for(uint i=0;i<productId.length;i++){
@@ -61,11 +68,16 @@ contract Product is Ownable {
         emit DeleteProduct(_productId);
     }
 
-    function updateStatus(uint _productId,uint _status) public onlyOwner {
+    function updateStatus(uint _productId,uint _status) public onlyOperator {
         _products[_productId].status = _status;
         emit UpdateStatus(_productId,_status);
     }
-    
+
+
+    function setOperator(address _operator) external onlyOwner {   
+        operator = _operator;
+    }
+
 
     event UpdateStatus(uint  product,uint256 status);
     event DeleteProduct(uint  product);

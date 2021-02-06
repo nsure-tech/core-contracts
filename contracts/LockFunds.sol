@@ -33,6 +33,7 @@ contract LockFunds is Ownable {
     uint256 public deadlineDuration = 30 minutes;
     
     address public operator;
+    
     /// @notice A record of states for signing / validating signatures
     mapping (address => uint) public nonces;
     
@@ -105,9 +106,8 @@ contract LockFunds is Ownable {
         return divCurrencies.length;
     }
 
-    
     function addDivCurrency(address _currency,uint256 _limit) public onlyOwner {
-        divCurrencies.push(DivCurrencie({divCurrencie:_currency,limit:_limit}));
+        divCurrencies.push(DivCurrencie({divCurrencie:_currency, limit:_limit}));
     }
 
     function setDepositMax(uint256 _max) external onlyOwner {
@@ -126,19 +126,23 @@ contract LockFunds is Ownable {
         emit Deposit(msg.sender, amount);
     }
 
-      function withdraw(uint256 _amount,uint deadline,uint8 v, bytes32 r, bytes32 s) external {
+    function withdraw(uint256 _amount,uint deadline,uint8 v, bytes32 r, bytes32 s) 
+        external
+    {
         require(_balances[msg.sender] >= _amount,"insufficient");
 
-        bytes32 domainSeparator = keccak256(abi.encode(DOMAIN_TYPEHASH, keccak256(bytes(name)),keccak256(bytes(version)), getChainId(), address(this)));
-        bytes32 structHash = keccak256(abi.encode(WITHDRAW_TYPEHASH,address(msg.sender), _amount,nonces[msg.sender]++, deadline));
-        bytes32 digest = keccak256(abi.encodePacked("\x19\x01", domainSeparator, structHash));
+        bytes32 domainSeparator =   keccak256(abi.encode(DOMAIN_TYPEHASH, keccak256(bytes(name)),
+                                        keccak256(bytes(version)), getChainId(), address(this)));
+        bytes32 structHash  = keccak256(abi.encode(WITHDRAW_TYPEHASH, address(msg.sender), 
+                                _amount,nonces[msg.sender]++, deadline));
+        bytes32 digest      = keccak256(abi.encodePacked("\x19\x01", domainSeparator, structHash));
 
         address signatory = ecrecover(digest, v, r, s);
+
         require(signatory != address(0), "invalid signature");
         require(signatory == signer, "unauthorized");
         require(block.timestamp <= deadline, "signature expired");
 
-        
         _balances[msg.sender] = _balances[msg.sender].sub(_amount);
         Nsure.transfer(msg.sender,_amount);
 
@@ -154,8 +158,8 @@ contract LockFunds is Ownable {
         for(uint256 i = 0; i<_burnUsers.length; i++) {
             require(_balances[_burnUsers[i]] >= _amounts[i], "insufficient");
 
-            Nsure.burn(_amounts[i]);
             _balances[_burnUsers[i]] = _balances[_burnUsers[i]].sub(_amounts[i]);
+            Nsure.burn(_amounts[i]);
 
             emit Burn(_burnUsers[i],_amounts[i]);
         }
