@@ -15,12 +15,13 @@ import "@openzeppelin/contracts/GSN/Context.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/EnumerableSet.sol";
 import "@openzeppelin/contracts/math/Math.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "./interfaces/INsure.sol";
 
 pragma solidity ^0.6.0;
 
 
-contract LockFunds is Ownable {
+contract LockFunds is Ownable, ReentrancyGuard{
     
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
@@ -114,7 +115,7 @@ contract LockFunds is Ownable {
         depositMax = _max;
     }
 
-    function deposit(uint amount) external {
+    function deposit(uint amount) external nonReentrant{
         require(amount > 0, "Cannot stake 0");
         require(amount <= depositMax,"too much");
 
@@ -127,7 +128,7 @@ contract LockFunds is Ownable {
     }
 
     function withdraw(uint256 _amount,uint deadline,uint8 v, bytes32 r, bytes32 s) 
-        external
+        external nonReentrant
     {
         require(_balances[msg.sender] >= _amount,"insufficient");
 
@@ -166,7 +167,7 @@ contract LockFunds is Ownable {
     }
 
     function claim(uint _amount, uint currency, uint deadline, uint8 v, bytes32 r, bytes32 s)
-        external
+        external nonReentrant
     {
         require(block.timestamp > claimAt[msg.sender].add(claimDuration), "wait" );
         require(block.timestamp.add(deadlineDuration) > deadline, "expired");

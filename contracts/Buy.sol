@@ -2,6 +2,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "./interfaces/ICover.sol";
 import "./interfaces/IWETH.sol";
 
@@ -9,7 +10,7 @@ import "./interfaces/IWETH.sol";
 pragma solidity >=0.6.0;
 pragma experimental ABIEncoderV2;
 
-contract Buy is Ownable {
+contract Buy is Ownable, ReentrancyGuard {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
     address public WETH;
@@ -127,7 +128,7 @@ contract Buy is Ownable {
             bytes32 s,
             uint256 deadline,
             uint256 currency
-        ) external payable
+        ) external payable nonReentrant
     {
         require(_product.getStatus(_productId) == 0, "disable");
         require(divCurrencies[currency] != address(0) && currency < divCurrencies.length, "no currency");

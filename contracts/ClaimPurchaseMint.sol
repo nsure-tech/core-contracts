@@ -9,12 +9,13 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/math/Math.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "./interfaces/INsure.sol";
 
 pragma solidity ^0.6.0;
 
 
-contract ClaimPurchaseMint is Ownable {
+contract ClaimPurchaseMint is Ownable, ReentrancyGuard{
     
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
@@ -91,7 +92,7 @@ contract ClaimPurchaseMint is Ownable {
     }
 
     // claim rewards of purchase rewards
-    function claim(uint _amount, uint deadline, uint8 v, bytes32 r, bytes32 s) external {
+    function claim(uint _amount, uint deadline, uint8 v, bytes32 r, bytes32 s) external nonReentrant {
         require(block.timestamp > claimAt[msg.sender].add(claimDuration), "wait" );
         require(block.timestamp.add(deadlineDuration) > deadline, "expired");
 
