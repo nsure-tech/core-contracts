@@ -21,6 +21,7 @@ import "./interfaces/INsure.sol";
 pragma solidity ^0.6.0;
 
 
+
 contract LockFunds is Ownable, ReentrancyGuard{
     
     using SafeMath for uint256;
@@ -28,7 +29,7 @@ contract LockFunds is Ownable, ReentrancyGuard{
     
     address public signer = 0x666747ffD8417a735dFf70264FDf4e29076c775a; 
     string constant public name = "Stake";
-    string public version = "1";
+    string public constant version = "1";
     
     uint256 public depositMax = 1000000e18;
     uint256 public deadlineDuration = 30 minutes;
@@ -38,11 +39,12 @@ contract LockFunds is Ownable, ReentrancyGuard{
     /// @notice A record of states for signing / validating signatures
     mapping (address => uint) public nonces;
     
-    struct DivCurrencie {
-        address divCurrencie;
+    struct DivCurrency {
+        address divCurrency;
         uint256 limit;
     }
-    DivCurrencie[] public divCurrencies;
+    
+    DivCurrency[] public divCurrencies;
     
 
     INsure public Nsure;
@@ -52,12 +54,8 @@ contract LockFunds is Ownable, ReentrancyGuard{
     mapping(address => uint256) private _balances;
     mapping(address => uint256) public claimAt;
 
-    event Deposit(address indexed user, uint256 amount);
-    event Withdraw(address indexed user,  uint256 amount);
-    event Unstake(address indexed user,uint256 amount);
-    event Claim(address indexed user,uint256 currency,uint256 amount);
-    event Burn(address indexed user,uint256 amount);
-    
+   
+
     modifier onlyOperator() {
         require(msg.sender == operator,"not operator");
         _;
@@ -78,52 +76,60 @@ contract LockFunds is Ownable, ReentrancyGuard{
         Nsure = INsure(_nsure);
     }
 
-    function totalSupply() public view returns (uint256) {
+    function totalSupply() external view returns (uint256) {
         return _totalSupply;
     }
 
-    function balanceOf(address account) public view returns (uint256) {
+    function balanceOf(address account) external view returns (uint256) {
         return _balances[account];
     }
 
     function setClaimDuration(uint256 _duration)external onlyOwner {
         require(claimDuration != _duration, "the same duration");
         claimDuration = _duration;
+        emit SetClaimDuration(_duration);
     }
 
     function setSigner(address _signer) external onlyOwner {
+        require(_signer != address(0),"_signer is zero");
         signer = _signer;
+        emit SetSigner(_signer);
     }
  
-    function setOperator(address _operator) external onlyOwner {   
+    function setOperator(address _operator) external onlyOwner {  
+        require(_operator != address(0),"_operator is zero"); 
         operator = _operator;
+        emit SetOperator(_operator);
     }
 
     function setDeadlineDuration(uint256 _duration) external onlyOwner {
         deadlineDuration = _duration;
+        emit SetDeadlineDuration(_duration);
     }
  
-    function getDivCurrencyLength() public view returns (uint256) {
+    function getDivCurrencyLength() external view returns (uint256) {
         return divCurrencies.length;
     }
 
-    function addDivCurrency(address _currency,uint256 _limit) public onlyOwner {
-        divCurrencies.push(DivCurrencie({divCurrencie:_currency, limit:_limit}));
+    function addDivCurrency(address _currency,uint256 _limit) external onlyOwner {
+        require(_currency != address(0),"_currency is zero");
+        divCurrencies.push(DivCurrency({divCurrency:_currency, limit:_limit}));
     }
 
     function setDepositMax(uint256 _max) external onlyOwner {
         depositMax = _max;
+        emit SetDepositMax(_max);
     }
 
     function deposit(uint amount) external nonReentrant{
         require(amount > 0, "Cannot stake 0");
-        require(amount <= depositMax,"too much");
+        require(amount <= depositMax,"exceeding the maximum limit");
 
         _totalSupply = _totalSupply.add(amount);
         _balances[msg.sender] = _balances[msg.sender].add(amount);
 
-        Nsure.transferFrom(msg.sender, address(this), amount);
-
+        // Nsure.transferFrom(msg.sender, address(this), amount);
+        require(Nsure.transferFrom(msg.sender,address(this),amount), "Failed to do the nsure.transferFrom()");
         emit Deposit(msg.sender, amount);
     }
 
@@ -145,13 +151,13 @@ contract LockFunds is Ownable, ReentrancyGuard{
         require(block.timestamp <= deadline, "signature expired");
 
         _balances[msg.sender] = _balances[msg.sender].sub(_amount);
-        Nsure.transfer(msg.sender,_amount);
-
+        // Nsure.transfer(msg.sender,_amount);
+        require(Nsure.transfer(msg.sender,_amount), "Failed to do the Nsure.transfer()");
         emit Withdraw(msg.sender,_amount);
     }
 
     // burn 1/2 for claiming 
-    function burnOuts(address[] memory _burnUsers, uint256[] memory _amounts) 
+    function burnOuts(address[] calldata _burnUsers, uint256[] calldata _amounts) 
         external onlyOperator 
     {
         require(_burnUsers.length == _amounts.length, "not equal");
@@ -171,7 +177,8 @@ contract LockFunds is Ownable, ReentrancyGuard{
     {
         require(block.timestamp > claimAt[msg.sender].add(claimDuration), "wait" );
         require(block.timestamp.add(deadlineDuration) > deadline, "expired");
-        require(_amount <= divCurrencies[currency].limit, "too much");
+        require(_amount <= divCurrencies[currency].limit, "exceeding the maximum limit");
+        require(block.timestamp <= deadline, "signature expired");
 
         bytes32 domainSeparator = keccak256(abi.encode(DOMAIN_TYPEHASH, keccak256(bytes(name)),keccak256(bytes(version)), getChainId(), address(this)));
         bytes32 structHash = keccak256(abi.encode(CLAIM_TYPEHASH,address(msg.sender), currency, _amount,nonces[msg.sender]++, deadline));
@@ -180,15 +187,15 @@ contract LockFunds is Ownable, ReentrancyGuard{
 
         require(signatory != address(0), "invalid signature");
         require(signatory == signer, "unauthorized");
-        require(block.timestamp <= deadline, "signature expired");
+        
 
         claimAt[msg.sender] = block.timestamp;
-        IERC20(divCurrencies[currency].divCurrencie).safeTransfer(msg.sender,_amount);
+        IERC20(divCurrencies[currency].divCurrency).safeTransfer(msg.sender,_amount);
 
         emit Claim(msg.sender,currency,_amount);
     }
 
-    function getChainId() public pure returns (uint) {
+    function getChainId() internal pure returns (uint) {
         uint256 chainId;
         assembly { chainId := chainid() }
         return chainId;
@@ -197,4 +204,16 @@ contract LockFunds is Ownable, ReentrancyGuard{
 
     receive() external payable {}
    
+
+
+    event Deposit(address indexed user, uint256 amount);
+    event Withdraw(address indexed user,  uint256 amount);
+    event Unstake(address indexed user,uint256 amount);
+    event Claim(address indexed user,uint256 currency,uint256 amount);
+    event Burn(address indexed user,uint256 amount);
+    event SetOperator(address indexed operator);
+    event SetClaimDuration(uint256 duration);
+    event SetSigner(address indexed signer);
+    event SetDeadlineDuration(uint256 deadlineDuration);
+    event SetDepositMax(uint256 depositMax);
 }

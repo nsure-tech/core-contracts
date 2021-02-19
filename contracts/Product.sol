@@ -15,12 +15,12 @@ pragma experimental ABIEncoderV2;
 contract Product is Ownable {
     using SafeMath for uint;
 
-    struct Product {
+    struct ProductStatus {
         uint status;
     }
 
     uint256[] public productId;
-    mapping (uint => Product) private _products;
+    mapping (uint => ProductStatus) private _products;
 
     address public operator;
 
@@ -29,12 +29,12 @@ contract Product is Ownable {
         _;
     }
 
-    function getLength() public view returns (uint) {
+    function getLength() external view returns (uint) {
         return productId.length;
     }
 
 
-    function getProduct(uint _productId) public view returns (Product memory) {
+    function getProduct(uint _productId) external view returns (ProductStatus memory) {
         return _products[_productId];
     }
 
@@ -42,44 +42,56 @@ contract Product is Ownable {
         return _products[_productId].status;
     }
 
-    function addProduct(uint _productId, uint _status) public onlyOperator  {
+    function addProduct(uint _productId, uint _status) external onlyOperator  {
         for(uint256 i=0;i<productId.length;i++){
             if(productId[i] == _productId){
                 return;
             }
         }
-        _products[_productId] =  Product(_status);
+        _products[_productId] =  ProductStatus(_status);
         productId.push(_productId) ;
 
         emit AddProduct(_productId,_status);
     }
 
-    function deleteProduct(uint _productId) public onlyOperator {
+    function deleteProduct(uint _productId) external onlyOperator {
         delete _products[_productId];
         
         for(uint i=0;i<productId.length;i++){
             if(productId[i] == _productId){
                 productId[i] = productId[productId.length-1];
                 productId.pop();
+
+                emit DeleteProduct(_productId);
                 break;
             }
         }
 
-        emit DeleteProduct(_productId);
     }
 
-    function updateStatus(uint _productId,uint _status) public onlyOperator {
-        _products[_productId].status = _status;
-        emit UpdateStatus(_productId,_status);
+       function updateStatus(uint _productId,uint _status) public onlyOperator {
+         for(uint256 i=0;i<productId.length;i++){
+            if(productId[i] == _productId){
+                require(_products[_productId].status != _status, "same status");
+                 _products[_productId].status = _status;
+                 emit UpdateStatus(_productId,_status);
+                 
+                return;
+            }
+        }
+
     }
 
 
-    function setOperator(address _operator) external onlyOwner {   
+    function setOperator(address _operator) external onlyOwner {  
+        require(_operator != address(0),"_operator is zero"); 
         operator = _operator;
+        emit SetOperator(_operator);
     }
 
 
     event UpdateStatus(uint  product,uint256 status);
     event DeleteProduct(uint  product);
     event AddProduct(uint  product,uint256 status);
+    event SetOperator(address indexed operator);
 }

@@ -8,7 +8,6 @@ import "./interfaces/IWETH.sol";
 
 
 pragma solidity >=0.6.0;
-pragma experimental ABIEncoderV2;
 
 contract Buy is Ownable, ReentrancyGuard {
     using SafeMath for uint256;
@@ -16,7 +15,7 @@ contract Buy is Ownable, ReentrancyGuard {
     address public WETH;
     address public signer = 0x666747ffD8417a735dFf70264FDf4e29076c775a;
     string public constant name = "Buy";
-    string public version = "1";
+    string public constant version = "1";
 
     address public stakingPool;
     address public surplus;
@@ -32,7 +31,6 @@ contract Buy is Ownable, ReentrancyGuard {
     uint256 public treasuryRate = 10;
     mapping(uint256 => Order) public insuranceOrders;
 
-    event NewOrder(Order);
 
     struct Order {
         address payable buyer;
@@ -45,7 +43,7 @@ contract Buy is Ownable, ReentrancyGuard {
         uint8 state;
     }
 
-    struct Product {
+    struct ProductStatus {
         uint status;
     }
 
@@ -75,45 +73,59 @@ contract Buy is Ownable, ReentrancyGuard {
 
     ////////////////// admin ///////////////
     function setStakeAddr(address _addr) external onlyOwner{
+        require(_addr != address(0),"_addr is zero");
         stakingPool = _addr;
+        emit SetStakeAddr(_addr);
     }
 
     function setSurplusAddr(address _addr) external onlyOwner{
+        require(_addr != address(0),"_addr is zero");
         surplus = _addr;
+        emit SetSurplusAddr(_addr);
     }
 
     function setTreasury (address _addr) external onlyOwner {
+        require(_addr != address(0),"_addr is zero");
         treasury = _addr;
+        emit SetTreasury(_addr);
     }
     
     function setSurplusRate(uint _rate) external onlyOwner{
         surplueRate = _rate;
+        emit SetSurplusRate(_rate);
     }
 
     function setStakeRate(uint _rate) external  onlyOwner{
         stakeRate = _rate;
+        emit SetStakeRate(_rate);
     }
 
     function setSigner(address _signer) external onlyOwner {
+        require(_signer != address(0),"_signer is zero");
         signer = _signer;
+        emit SetSigner(_signer);
     }
 
 
-    function addDivCurrency(address currency) public onlyOwner {
+    function addDivCurrency(address currency) external onlyOwner {
+        require(currency != address(0),"currency is zero");
         divCurrencies.push(currency);
+        emit AddDivCurrency(currency);
     }
 
-    function delDivCurrency(address currency) public onlyOwner {
+    function delDivCurrency(address currency) external onlyOwner {
+        require(currency != address(0),"currency is zero");
         for(uint256 i=0;i<divCurrencies.length;i++){
             if(divCurrencies[i]== currency){
                 delete divCurrencies[i];
+                emit DeleteDivCurrency(currency);
                 break;
             }
         }
     }
     
 
-    function getDivCurrencyLength() public view returns (uint256) {
+    function getDivCurrencyLength() external view returns (uint256) {
         return divCurrencies.length;
     }
 
@@ -130,9 +142,10 @@ contract Buy is Ownable, ReentrancyGuard {
             uint256 currency
         ) external payable nonReentrant
     {
-        require(_product.getStatus(_productId) == 0, "disable");
-        require(divCurrencies[currency] != address(0) && currency < divCurrencies.length, "no currency");
-
+        require(_product.getStatus(_productId) == 1, "this insurance is not currently available for purchase");
+        require(divCurrencies[currency] != address(0) && currency < divCurrencies.length, "this asset type is not supported");
+        require(block.timestamp <= deadline, "signature expired");
+      
         if(divCurrencies[currency] == WETH) {
             //eth =>weth
             require(msg.value == _cost,"not equal");
@@ -177,7 +190,8 @@ contract Buy is Ownable, ReentrancyGuard {
         address signatory = ecrecover(digest, v, r, s);
         require(signatory != address(0), "invalid signature");
         require(signatory == signer, "unauthorized");
-        require(block.timestamp <= deadline, "signature expired");
+        
+
 
         Order storage _order = insuranceOrders[orderIndex];
         orderIndex++;
@@ -196,11 +210,23 @@ contract Buy is Ownable, ReentrancyGuard {
         );
     }
 
-    function getChainId() public pure returns (uint256) {
+    function getChainId() internal pure returns (uint256) {
         uint256 chainId;
         assembly {
             chainId := chainid()
         }
         return chainId;
     }
+    
+    
+    event NewOrder(Order);
+    event SetStakeAddr(address indexed stake);
+    event SetSurplusAddr(address indexed surplus);
+    event SetTreasury(address indexed treasury);
+    event SetSurplusRate(uint256 rate);
+    event SetStakeRate(uint256 rate);
+    event SetSigner(address indexed signer);
+    event AddDivCurrency(address indexed currency);
+    event DeleteDivCurrency(address indexed currency);
+    
 }

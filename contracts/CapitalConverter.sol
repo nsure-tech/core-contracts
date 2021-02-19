@@ -13,12 +13,13 @@ import "@openzeppelin/contracts/utils/Pausable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
+pragma solidity ^0.6.0;
 
 contract CapitalConverter is ERC20, Ownable, Pausable, ReentrancyGuard {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
-    address public ETHEREUM = address(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE);
+    address public constant ETHEREUM = address(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE);
 
     uint256 public maxConvert = 1000e18;
     address public token;
@@ -56,9 +57,9 @@ contract CapitalConverter is ERC20, Ownable, Pausable, ReentrancyGuard {
     }
     
     // convert ETH or USDx to nETH/nUSDx
-    function convert(uint256 _amount) public payable nonReentrant whenNotPaused {
+    function convert(uint256 _amount) external payable nonReentrant whenNotPaused {
         require(_amount > 0, "CapitalConverter: Cannot stake 0.");
-        require(_amount <= maxConvert, "too much");
+        require(_amount <= maxConvert, "exceeding the maximum limit");
 
         if (token != ETHEREUM) {
             require(msg.value == 0, "CapitalConverter: Should not allow ETH deposits.");
@@ -76,7 +77,8 @@ contract CapitalConverter is ERC20, Ownable, Pausable, ReentrancyGuard {
 
     // withdraw the ETH or USDx
     function exit(uint256 _value) external nonReentrant whenNotPaused {
-        require(balanceOf(_msgSender()) >= _value && _value > 0, "CapitalConverter: _value is not good");
+        
+        require(balanceOf(_msgSender()) >= _value && _value > 0, "CapitalConverter: insufficient assets");
 
         uint256 value = _value.mul(smartBalance()).div(totalSupply());
         if (token != ETHEREUM) {
@@ -92,6 +94,7 @@ contract CapitalConverter is ERC20, Ownable, Pausable, ReentrancyGuard {
     }
 
     function payouts(address payable _to, uint256 _amount) external onlyOperator {
+        require(_to != address(0),"_to is zero");
         if (token != ETHEREUM) {
             IERC20(token).safeTransfer(_to, _amount);
         } else {
@@ -107,15 +110,20 @@ contract CapitalConverter is ERC20, Ownable, Pausable, ReentrancyGuard {
     }
 
     function setOperator(address _operator) external onlyOwner {
+        require(_operator != address(0),"_operator is zero");
         operator = _operator;
+        emit eSetOperator(_operator);
     }
 
     function setMaxConvert(uint256 _max) external onlyOwner {
         maxConvert = _max;
+        emit eSetMaxConvert(_max);
     }
 
 
     event eMint(address indexed sender, uint256 input, uint256 amount);
     event eBurn(address indexed sender, uint256 amount, uint256 output);
     event ePayouts(address indexed to, uint256 amount);
+    event eSetOperator(address indexed operator);
+    event eSetMaxConvert(uint256 max);
 }

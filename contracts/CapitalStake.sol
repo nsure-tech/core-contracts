@@ -16,6 +16,8 @@ import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "./interfaces/INsure.sol";
 
 
+
+
 contract CapitalStake is Ownable, Pausable {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
@@ -64,10 +66,12 @@ contract CapitalStake is Ownable, Pausable {
    
     function updateBlockReward(uint256 _newReward) external onlyOwner {
         nsurePerBlock   = _newReward;
+        emit UpdateBlockReward(_newReward);
     }
 
     function updateWithdrawPending(uint256 _seconds) external onlyOwner {
         pendingDuration = _seconds;
+        emit UpdateWithdrawPending(_seconds);
     }
 
     function poolLength() public view returns (uint256) {
@@ -75,7 +79,8 @@ contract CapitalStake is Ownable, Pausable {
     }
 
     // Add a new lp to the pool. Can only be called by the owner.
-    function add(uint256 _allocPoint, IERC20 _lpToken, bool _withUpdate) onlyOwner public {
+    function add(uint256 _allocPoint, IERC20 _lpToken, bool _withUpdate) onlyOwner external {
+        require(address(_lpToken) != address(0),"_lpToken is zero");
         for(uint256 i=0; i<poolLength(); i++) {
             require(address(_lpToken) != address(poolInfo[i].lpToken), "Duplicate Token!");
         }
@@ -93,18 +98,22 @@ contract CapitalStake is Ownable, Pausable {
             lastRewardBlock: lastRewardBlock,
             accNsurePerShare: 0
         }));
+
+        emit Add(_allocPoint,_lpToken,_withUpdate);
     }
 
-    function set(uint256 _pid, uint256 _allocPoint, bool _withUpdate) public onlyOwner {
+    function set(uint256 _pid, uint256 _allocPoint, bool _withUpdate)  onlyOwner external {
+        require(_pid < poolInfo.length , "invalid _pid");
         if (_withUpdate) {
             massUpdatePools();
         }
 
         totalAllocPoint = totalAllocPoint.sub(poolInfo[_pid].allocPoint).add(_allocPoint);
         poolInfo[_pid].allocPoint = _allocPoint;
+        emit Set(_pid,_allocPoint,_withUpdate);
     }
 
-    function getMultiplier(uint256 _from, uint256 _to) public view returns (uint256) {
+    function getMultiplier(uint256 _from, uint256 _to) public pure returns (uint256) {
         return _to.sub(_from);
     }
 
@@ -132,6 +141,7 @@ contract CapitalStake is Ownable, Pausable {
     }
 
     function updatePool(uint256 _pid) public {
+        require(_pid < poolInfo.length, "invalid _pid");
         PoolInfo storage pool = poolInfo[_pid];
         if (block.number <= pool.lastRewardBlock) {
             return;
@@ -153,32 +163,39 @@ contract CapitalStake is Ownable, Pausable {
     }
 
 
-    function deposit(uint256 _pid, uint256 _amount) public whenNotPaused {
+    function deposit(uint256 _pid, uint256 _amount) external whenNotPaused {
+        require(_pid < poolInfo.length, "invalid _pid");
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][msg.sender];
+        
         updatePool(_pid);
+
+      
+        pool.lpToken.safeTransferFrom(address(msg.sender), address(this), _amount);
 
         if (user.amount > 0) {
             uint256 pending = user.amount.mul(pool.accNsurePerShare).div(1e12).sub(user.rewardDebt);
             safeNsureTransfer(msg.sender,pending);
         }
 
-        pool.lpToken.safeTransferFrom(address(msg.sender), address(this), _amount);
         user.amount = user.amount.add(_amount);
         user.rewardDebt = user.amount.mul(pool.accNsurePerShare).div(1e12);
         
         pool.amount = pool.amount.add(_amount);
+
+       
 
         emit Deposit(msg.sender, _pid, _amount);
     }
 
 
     // unstake, need pending sometime
-    function unstake(uint256 _pid,uint256 _amount) public whenNotPaused {
+    function unstake(uint256 _pid,uint256 _amount) external whenNotPaused {
+        require(_pid < poolInfo.length , "invalid _pid");
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][msg.sender];
 
-        require(user.amount >= _amount, "unstake: not good");
+        require(user.amount >= _amount, "unstake: insufficient assets");
 
         updatePool(_pid);
         uint256 pending = user.amount.mul(pool.accNsurePerShare).div(1e12).sub(user.rewardDebt);
@@ -205,7 +222,8 @@ contract CapitalStake is Ownable, Pausable {
     
     // when it's pending while a claim occurs, the value of the withdrawal will decrease as usual
     // so we keep the claim function by this tool.
-    function withdraw(uint256 _pid) public whenNotPaused {
+    function withdraw(uint256 _pid) external whenNotPaused {
+        require(_pid < poolInfo.length , "invalid _pid");
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][msg.sender];
 
@@ -213,15 +231,19 @@ contract CapitalStake is Ownable, Pausable {
 
         uint256 amount          = user.pendingWithdrawal;
         pool.amount             = pool.amount.sub(amount);
-        pool.lpToken.safeTransfer(address(msg.sender), amount);
 
         user.pendingWithdrawal  = 0;
+
+        pool.lpToken.safeTransfer(address(msg.sender), amount);
+
+     
         
         emit Withdraw(msg.sender, _pid, amount);
     }
 
     //claim reward
     function claim(uint256 _pid) external whenNotPaused {
+        require(_pid < poolInfo.length , "invalid _pid");
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][msg.sender];
 
@@ -249,11 +271,14 @@ contract CapitalStake is Ownable, Pausable {
     // }
 
     function safeNsureTransfer(address _to, uint256 _amount) internal {
+        require(_to != address(0),"_to is zero");
         uint256 nsureBal = nsure.balanceOf(address(this));
         if (_amount > nsureBal) {
-            nsure.transfer(_to, nsureBal);
+            // nsure.transfer(_to, nsureBal);
+            require(nsure.transfer(_to,nsureBal), "Failed to do the nsure.transfer()");
         } else {
-            nsure.transfer(_to, _amount);
+            // nsure.transfer(_to, _amount);
+            require(nsure.transfer(_to,_amount), "Failed to do the nsure.transfer()");
         }
     }
     
@@ -263,6 +288,9 @@ contract CapitalStake is Ownable, Pausable {
     event Deposit(address indexed user, uint256 indexed pid, uint256 amount);
     event Withdraw(address indexed user, uint256 indexed pid, uint256 amount);
     event Unstake(address indexed user,uint256 pid, uint256 amount);
-
+    event UpdateBlockReward(uint256 reward);
+    event UpdateWithdrawPending(uint256 duration);
+    event Add(uint256 point, IERC20 token, bool update);
+    event Set(uint256 pid, uint256 point, bool update);
     // event EmergencyWithdraw(address indexed user, uint256 indexed pid, uint256 amount);
 }

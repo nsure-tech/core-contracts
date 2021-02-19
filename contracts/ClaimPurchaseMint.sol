@@ -22,7 +22,7 @@ contract ClaimPurchaseMint is Ownable, ReentrancyGuard{
     
     address public signer = 0x666747ffD8417a735dFf70264FDf4e29076c775a; 
     string constant public name = "Claim";
-    string public version = "1";
+    string public constant version = "1";
 
     uint256 public nsurePerBlock    = 2 * 1e17;
     
@@ -40,9 +40,7 @@ contract ClaimPurchaseMint is Ownable, ReentrancyGuard{
     mapping(address => uint256) private _balances;
     mapping(address => uint256) public claimAt;
 
-    event Claim(address indexed user,uint256 amount);
- 
-
+   
     /// @notice The EIP-712 typehash for the contract's domain
     bytes32 public constant DOMAIN_TYPEHASH = keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)");
  
@@ -56,11 +54,11 @@ contract ClaimPurchaseMint is Ownable, ReentrancyGuard{
         lastRewardBlock = block.number > startBlock ? block.number : startBlock;
     }
 
-    function totalSupply() public view returns (uint256) {
+    function totalSupply() external view returns (uint256) {
         return _totalSupply;
     }
 
-    function balanceOf(address account) public view returns (uint256) {
+    function balanceOf(address account) external view returns (uint256) {
         return _balances[account];
     }
 
@@ -68,18 +66,23 @@ contract ClaimPurchaseMint is Ownable, ReentrancyGuard{
         require(claimDuration != _duration, "the same duration");
 
         claimDuration = _duration;
+        emit SetClaimDuration(_duration);
     }
 
     function setSigner(address _signer) external onlyOwner {
+        require(_signer != address(0),"_signer is zero");
         signer = _signer;
+        emit SetSigner(_signer);
     }
 
     function setDeadlineDuration(uint256 _duration) external onlyOwner {
         deadlineDuration = _duration;
+        emit SetDeadlineDuration(_duration);
     }
 
     function updateBlockReward(uint256 _newReward) external onlyOwner {
         nsurePerBlock   = _newReward;
+        emit UpdateBlockReward(_newReward);
     }
 
     function mintPurchaseNsure() internal {
@@ -88,7 +91,9 @@ contract ClaimPurchaseMint is Ownable, ReentrancyGuard{
         }
 
         uint256 nsureReward = nsurePerBlock.mul(block.number.sub(lastRewardBlock));
-        Nsure.mint(address(this), nsureReward);
+        // Nsure.mint(address(this), nsureReward);
+        require(Nsure.mint(address(this),nsureReward), "Failed to do the Nsure.mint()");
+        lastRewardBlock = block.number;
     }
 
     // claim rewards of purchase rewards
@@ -96,6 +101,7 @@ contract ClaimPurchaseMint is Ownable, ReentrancyGuard{
         require(block.timestamp > claimAt[msg.sender].add(claimDuration), "wait" );
         require(block.timestamp.add(deadlineDuration) > deadline, "expired");
 
+        require(block.timestamp <= deadline, "signature expired");
         // mint nsure to address(this) first.
         mintPurchaseNsure();
 
@@ -109,17 +115,27 @@ contract ClaimPurchaseMint is Ownable, ReentrancyGuard{
 
         require(signatory != address(0), "invalid signature");
         require(signatory == signer, "unauthorized");
-        require(block.timestamp <= deadline, "signature expired");
+        
 
         claimAt[msg.sender] = block.timestamp;
-        Nsure.transfer(msg.sender, _amount);
+        // Nsure.transfer(msg.sender, _amount);
+        require(Nsure.transfer(msg.sender,_amount), "Failed to do the Nsure.transfer()");
 
         emit Claim(msg.sender, _amount);
     }
 
-    function getChainId() public pure returns (uint) {
+    function getChainId() internal pure returns (uint) {
         uint256 chainId;
         assembly { chainId := chainid() }
         return chainId;
     }
+    
+    
+     event Claim(address indexed user,uint256 amount);
+    event SetClaimDuration(uint256 duration);
+    event SetSigner(address indexed signer);
+    event SetDeadlineDuration(uint256 duration);
+    event UpdateBlockReward(uint256 reward);
+ 
+
 }
