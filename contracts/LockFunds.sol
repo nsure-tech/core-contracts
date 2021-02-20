@@ -129,7 +129,7 @@ contract LockFunds is Ownable, ReentrancyGuard{
         _balances[msg.sender] = _balances[msg.sender].add(amount);
 
         // Nsure.transferFrom(msg.sender, address(this), amount);
-        require(Nsure.transferFrom(msg.sender,address(this),amount), "Failed to do the nsure.transferFrom()");
+        Nsure.transferFrom(msg.sender,address(this),amount);
         emit Deposit(msg.sender, amount);
     }
 
@@ -152,7 +152,7 @@ contract LockFunds is Ownable, ReentrancyGuard{
 
         _balances[msg.sender] = _balances[msg.sender].sub(_amount);
         // Nsure.transfer(msg.sender,_amount);
-        require(Nsure.transfer(msg.sender,_amount), "Failed to do the Nsure.transfer()");
+        Nsure.transfer(msg.sender,_amount);
         emit Withdraw(msg.sender,_amount);
     }
 

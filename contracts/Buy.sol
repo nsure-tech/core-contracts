@@ -3,11 +3,12 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
-import "./interfaces/ICover.sol";
+import "./interfaces/IProduct.sol";
 import "./interfaces/IWETH.sol";
 
 
 pragma solidity >=0.6.0;
+pragma experimental ABIEncoderV2;
 
 contract Buy is Ownable, ReentrancyGuard {
     using SafeMath for uint256;
@@ -17,17 +18,17 @@ contract Buy is Ownable, ReentrancyGuard {
     string public constant name = "Buy";
     string public constant version = "1";
 
-    address public stakingPool;
+    address public lockFunds;
     address public surplus;
     address public treasury;
-    ICover public _product ;
+    IProduct public product;
 
     /// @notice A record of states for signing / validating signatures
     mapping(address => uint256) public nonces;
 
     uint256 public orderIndex = 1000;
-    uint256 public surplueRate = 40;
-    uint256 public stakeRate = 50;
+    uint256 public surplusRate = 40;
+    uint256 public lockFundsRate = 50;
     uint256 public treasuryRate = 10;
     mapping(uint256 => Order) public insuranceOrders;
 
@@ -50,12 +51,12 @@ contract Buy is Ownable, ReentrancyGuard {
     address[]  public  divCurrencies;
 
 
-    constructor(address _stake,address _surplus,address _cover,address _weth,address _treasury) public {
-        stakingPool = _stake;
+    constructor(address _lockFunds,address _surplus,address _product,address _weth,address _treasury) public {
+        lockFunds = _lockFunds;
         surplus = _surplus;
         WETH = _weth;
         treasury = _treasury;
-        _product = ICover(_cover);
+        product = IProduct(_product);
     }
 
     /// @notice The EIP-712 typehash for the contract's domain
@@ -72,33 +73,33 @@ contract Buy is Ownable, ReentrancyGuard {
 
 
     ////////////////// admin ///////////////
-    function setStakeAddr(address _addr) external onlyOwner{
-        require(_addr != address(0),"_addr is zero");
-        stakingPool = _addr;
-        emit SetStakeAddr(_addr);
+    function setLockFunds(address _lockFunds) external onlyOwner{
+        require(_lockFunds != address(0),"_lockFunds is zero");
+        lockFunds = _lockFunds;
+        emit SetLockFunds(_lockFunds);
     }
 
-    function setSurplusAddr(address _addr) external onlyOwner{
-        require(_addr != address(0),"_addr is zero");
-        surplus = _addr;
-        emit SetSurplusAddr(_addr);
+    function setSurplus(address _surplus) external onlyOwner{
+        require(_surplus != address(0),"_surplus is zero");
+        surplus = _surplus;
+        emit SetSurplus(_surplus);
     }
 
-    function setTreasury (address _addr) external onlyOwner {
-        require(_addr != address(0),"_addr is zero");
-        treasury = _addr;
-        emit SetTreasury(_addr);
+    function setTreasury (address _treasury) external onlyOwner {
+        require(_treasury != address(0),"_treasury is zero");
+        treasury = _treasury;
+        emit SetTreasury(_treasury);
     }
     
-    function setSurplusRate(uint _rate) external onlyOwner{
-        surplueRate = _rate;
-        emit SetSurplusRate(_rate);
-    }
-
-    function setStakeRate(uint _rate) external  onlyOwner{
-        stakeRate = _rate;
-        emit SetStakeRate(_rate);
-    }
+   
+   function setRate(uint256 _lockFundsRate, uint256 _surplusRate, uint256 _treasuryRate) external onlyOwner {
+       require(_lockFundsRate + _surplusRate + _treasuryRate == 100, "not equal 100");
+       lockFundsRate = _lockFundsRate;
+       surplusRate = _surplusRate;
+       treasuryRate = _treasuryRate;
+       emit SetRate(lockFundsRate,surplusRate,treasuryRate);
+   }
+ 
 
     function setSigner(address _signer) external onlyOwner {
         require(_signer != address(0),"_signer is zero");
@@ -142,7 +143,7 @@ contract Buy is Ownable, ReentrancyGuard {
             uint256 currency
         ) external payable nonReentrant
     {
-        require(_product.getStatus(_productId) == 1, "this insurance is not currently available for purchase");
+        require(product.getStatus(_productId) == 1, "this insurance is not currently available for purchase");
         require(divCurrencies[currency] != address(0) && currency < divCurrencies.length, "this asset type is not supported");
         require(block.timestamp <= deadline, "signature expired");
       
@@ -154,8 +155,8 @@ contract Buy is Ownable, ReentrancyGuard {
             IERC20(divCurrencies[currency]).safeTransferFrom(msg.sender,address(this), _cost);
         }
         
-        IERC20(divCurrencies[currency]).safeTransfer(address(stakingPool), _cost.mul(stakeRate).div(100));
-        IERC20(divCurrencies[currency]).safeTransfer(address(surplus), _cost.mul(surplueRate).div(100));
+        IERC20(divCurrencies[currency]).safeTransfer(address(lockFunds), _cost.mul(lockFundsRate).div(100));
+        IERC20(divCurrencies[currency]).safeTransfer(address(surplus), _cost.mul(surplusRate).div(100));
         IERC20(divCurrencies[currency]).safeTransfer(address(treasury), _cost.mul(treasuryRate).div(100));
         
         bytes32 domainSeparator =
@@ -220,11 +221,10 @@ contract Buy is Ownable, ReentrancyGuard {
     
     
     event NewOrder(Order);
-    event SetStakeAddr(address indexed stake);
-    event SetSurplusAddr(address indexed surplus);
+    event SetLockFunds(address indexed lockFunds);
+    event SetSurplus(address indexed surplus);
     event SetTreasury(address indexed treasury);
-    event SetSurplusRate(uint256 rate);
-    event SetStakeRate(uint256 rate);
+    event SetRate(uint256 lockFundsRate, uint256 surplusRate, uint256 treasuryRate);
     event SetSigner(address indexed signer);
     event AddDivCurrency(address indexed currency);
     event DeleteDivCurrency(address indexed currency);

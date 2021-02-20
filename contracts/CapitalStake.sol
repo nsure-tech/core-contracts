@@ -13,12 +13,13 @@ import "@openzeppelin/contracts/GSN/Context.sol";
 import "@openzeppelin/contracts/utils/Pausable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "./interfaces/INsure.sol";
 
 
 
 
-contract CapitalStake is Ownable, Pausable {
+contract CapitalStake is Ownable, Pausable, ReentrancyGuard {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
@@ -190,7 +191,7 @@ contract CapitalStake is Ownable, Pausable {
 
 
     // unstake, need pending sometime
-    function unstake(uint256 _pid,uint256 _amount) external whenNotPaused {
+    function unstake(uint256 _pid,uint256 _amount) external nonReentrant whenNotPaused {
         require(_pid < poolInfo.length , "invalid _pid");
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][msg.sender];
@@ -222,7 +223,7 @@ contract CapitalStake is Ownable, Pausable {
     
     // when it's pending while a claim occurs, the value of the withdrawal will decrease as usual
     // so we keep the claim function by this tool.
-    function withdraw(uint256 _pid) external whenNotPaused {
+    function withdraw(uint256 _pid) external nonReentrant whenNotPaused {
         require(_pid < poolInfo.length , "invalid _pid");
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][msg.sender];
@@ -242,7 +243,7 @@ contract CapitalStake is Ownable, Pausable {
     }
 
     //claim reward
-    function claim(uint256 _pid) external whenNotPaused {
+    function claim(uint256 _pid) external nonReentrant whenNotPaused {
         require(_pid < poolInfo.length , "invalid _pid");
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][msg.sender];
@@ -275,10 +276,10 @@ contract CapitalStake is Ownable, Pausable {
         uint256 nsureBal = nsure.balanceOf(address(this));
         if (_amount > nsureBal) {
             // nsure.transfer(_to, nsureBal);
-            require(nsure.transfer(_to,nsureBal), "Failed to do the nsure.transfer()");
+            nsure.transfer(_to,nsureBal);
         } else {
             // nsure.transfer(_to, _amount);
-            require(nsure.transfer(_to,_amount), "Failed to do the nsure.transfer()");
+            nsure.transfer(_to,_amount);
         }
     }
     
