@@ -174,17 +174,16 @@ contract CapitalStake is Ownable, Pausable, ReentrancyGuard {
       
         pool.lpToken.safeTransferFrom(address(msg.sender), address(this), _amount);
 
-        if (user.amount > 0) {
-            uint256 pending = user.amount.mul(pool.accNsurePerShare).div(1e12).sub(user.rewardDebt);
-            safeNsureTransfer(msg.sender,pending);
-        }
-
+        uint256 pending = user.amount.mul(pool.accNsurePerShare).div(1e12).sub(user.rewardDebt);
+        
         user.amount = user.amount.add(_amount);
         user.rewardDebt = user.amount.mul(pool.accNsurePerShare).div(1e12);
         
         pool.amount = pool.amount.add(_amount);
 
-       
+        if(pending > 0){
+            safeNsureTransfer(msg.sender,pending);
+        }
 
         emit Deposit(msg.sender, _pid, _amount);
     }
@@ -200,13 +199,14 @@ contract CapitalStake is Ownable, Pausable, ReentrancyGuard {
 
         updatePool(_pid);
         uint256 pending = user.amount.mul(pool.accNsurePerShare).div(1e12).sub(user.rewardDebt);
-        safeNsureTransfer(msg.sender, pending);
-
+       
         user.amount     = user.amount.sub(_amount);
         user.rewardDebt = user.amount.mul(pool.accNsurePerShare).div(1e12);
 
         user.pendingAt  = block.timestamp;
         user.pendingWithdrawal = user.pendingWithdrawal.add(_amount);
+
+        safeNsureTransfer(msg.sender, pending);
 
         emit Unstake(msg.sender,_pid,_amount);
     }
