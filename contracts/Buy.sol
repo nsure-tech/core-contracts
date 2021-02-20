@@ -110,6 +110,9 @@ contract Buy is Ownable, ReentrancyGuard {
 
     function addDivCurrency(address currency) external onlyOwner {
         require(currency != address(0),"currency is zero");
+        for(uint256 i=0;i<divCurrencies.length;i++){
+            require(divCurrencies[i] != currency,"existed");
+        }
         divCurrencies.push(currency);
         emit AddDivCurrency(currency);
     }
