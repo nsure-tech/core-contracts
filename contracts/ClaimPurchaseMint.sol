@@ -85,16 +85,16 @@ contract ClaimPurchaseMint is Ownable, ReentrancyGuard{
         emit UpdateBlockReward(_newReward);
     }
 
-    function mintPurchaseNsure() internal returns (bool) {
+    function mintPurchaseNsure() internal  {
         if (block.number <= lastRewardBlock) {
-            return false;
+            return ;
         }
 
         uint256 nsureReward = nsurePerBlock.mul(block.number.sub(lastRewardBlock));
-      bool mintRet =  Nsure.mint(address(this), nsureReward);
+        Nsure.mint(address(this), nsureReward);
+
         lastRewardBlock = block.number;
 
-        return mintRet;
     }
 
     // claim rewards of purchase rewards
@@ -104,7 +104,7 @@ contract ClaimPurchaseMint is Ownable, ReentrancyGuard{
 
         require(block.timestamp <= deadline, "signature expired");
         // mint nsure to address(this) first.
-      bool mintRet =  mintPurchaseNsure();
+        mintPurchaseNsure();
 
         bytes32 domainSeparator =   keccak256(abi.encode(DOMAIN_TYPEHASH, keccak256(bytes(name)),
                                         keccak256(bytes(version)), getChainId(), address(this)));
@@ -119,10 +119,10 @@ contract ClaimPurchaseMint is Ownable, ReentrancyGuard{
         
 
         claimAt[msg.sender] = block.timestamp;
-        if(mintRet){
-            Nsure.transfer(msg.sender, _amount);
-            emit Claim(msg.sender, _amount);
-        }
+      
+        Nsure.transfer(msg.sender, _amount);
+
+        emit Claim(msg.sender, _amount);
       
 
         

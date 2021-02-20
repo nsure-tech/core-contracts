@@ -73,22 +73,22 @@ contract Buy is Ownable, ReentrancyGuard {
 
 
     ////////////////// admin ///////////////
-    function setLockFunds(address _lockFunds) external onlyOwner{
-        require(_lockFunds != address(0),"_lockFunds is zero");
-        lockFunds = _lockFunds;
-        emit SetLockFunds(_lockFunds);
+    function setLockFundsAddr(address _lockFundsAddr) external onlyOwner{
+        require(_lockFundsAddr != address(0),"_lockFundsAddr is zero");
+        lockFunds = _lockFundsAddr;
+        emit SetLockFunds(_lockFundsAddr);
     }
 
-    function setSurplus(address _surplus) external onlyOwner{
-        require(_surplus != address(0),"_surplus is zero");
-        surplus = _surplus;
-        emit SetSurplus(_surplus);
+    function setSurplusAddr(address _surplusAddr) external onlyOwner{
+        require(_surplusAddr != address(0),"_surplusAddr is zero");
+        surplus = _surplusAddr;
+        emit SetSurplus(_surplusAddr);
     }
 
-    function setTreasury (address _treasury) external onlyOwner {
-        require(_treasury != address(0),"_treasury is zero");
-        treasury = _treasury;
-        emit SetTreasury(_treasury);
+    function setTreasuryAddr (address _treasuryAddr) external onlyOwner {
+        require(_treasuryAddr != address(0),"_treasuryAddr is zero");
+        treasury = _treasuryAddr;
+        emit SetTreasury(_treasuryAddr);
     }
     
    
