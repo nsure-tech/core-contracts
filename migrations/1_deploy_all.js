@@ -49,7 +49,7 @@ const ClaimPurchaseMint = artifacts.require('ClaimPurchaseMint'); //0
 
 
 module.exports = function (deployer){ //nsure
-  deployer.deploy(ClaimPurchaseMint,'0x6cf83f10234ac1db01baed7e45c52a59c9c66a3b')
+  deployer.deploy(ClaimPurchaseMint,'0x6cf83f10234ac1db01baed7e45c52a59c9c66a3b',100)
 }
 
 

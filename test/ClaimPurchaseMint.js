@@ -5,7 +5,7 @@ contract('ClaimPurchaseMint Test', async accounts => {
         
         let contract = await ClaimPurchaseMint.deployed()
         let total =await contract.totalSupply()
-        console.log('total:',total);
+        console.log('total:',total.toNumber());
         
         
     });

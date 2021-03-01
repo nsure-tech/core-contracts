@@ -2,7 +2,7 @@ build
 node_modules
 .env
 artifacts
-migrations/_*
 .DS_Store
 build
 flatten
+migrationstest
