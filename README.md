@@ -1,4 +1,4 @@
-## test
+## Test
 
 > 1.migrations/1_deploy_all.js ""Open comments on smart contract to be tested
 
