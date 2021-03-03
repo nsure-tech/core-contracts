@@ -1,5 +1,5 @@
 ## test
 
-> 1.migrations/1_deploy_all.js 中打开要测试的合约的注释
+> 1.migrations/1_deploy_all.js ""Open comments on smart contract to be tested
 
-> 2.执行 ` truffle test test/对应的合约`
+> 2.Run ` truffle test test/"the contract you want to test"`
