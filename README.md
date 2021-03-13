@@ -17,9 +17,13 @@ And for the detail funds flow, please refer to: ![Funds Flow](https://firebasest
 
 ## Test
 
-> 1.migrations/1_deploy_all.js ""Open comments on smart contract to be tested
+> 1.modify: `migrations/1_deploy_all.js`, open comments on smart contract to be tested
 
 > 2.Run `truffle test test/` to do testing
+
+
+## License
+Nsure contracts and all other utilities are licensed under [Apache 2.0](LICENSE).
 
 ## Contact
 If you want any further information, feel free to contact us at **contact@nsure.network** :) ...

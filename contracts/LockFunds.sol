@@ -156,7 +156,7 @@ contract LockFunds is Ownable, ReentrancyGuard{
         emit Withdraw(msg.sender,_amount);
     }
 
-    // burn 1/2 for claiming 
+    // burn 1/2 for claiming
     function burnOuts(address[] calldata _burnUsers, uint256[] calldata _amounts) 
         external onlyOperator 
     {

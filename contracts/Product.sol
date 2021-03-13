@@ -42,7 +42,7 @@ contract Product is Ownable {
         return _products[_productId].status;
     }
 
-    function addProduct(uint _productId, uint _status) external onlyOperator  {
+    function addProduct(uint _productId, uint _status) external onlyOperator {
         for(uint256 i=0;i<productId.length;i++){
             if(productId[i] == _productId){
                 return;
