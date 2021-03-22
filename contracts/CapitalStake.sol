@@ -23,9 +23,12 @@ contract CapitalStake is Ownable, Pausable, ReentrancyGuard {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
+    address public signer = 0x666747ffD8417a735dFf70264FDf4e29076c775a;
+    string public constant name = "CapitalStake";
+    string public constant version = "1";
     // Info of each user.
     struct UserInfo {
-        uint256 amount;     // How many LP tokens the user has provided.
+        uint256 amount;     // How many  tokens the user has provided.
         uint256 rewardDebt; // Reward debt. See explanation below.
         uint256 reward;
 
@@ -35,11 +38,12 @@ contract CapitalStake is Ownable, Pausable, ReentrancyGuard {
 
     // Info of each pool.
     struct PoolInfo {
-        uint256 amount;             //Total Deposit of Lp token
-        IERC20 lpToken;             // Address of LP token contract.
+        uint256 amount;             //Total Deposit of token
+        IERC20 lpToken;             // Address of token contract.
         uint256 allocPoint;
         uint256 lastRewardBlock;
         uint256 accNsurePerShare;
+        uint256 pending;
     }
  
     INsure public nsure;
@@ -47,10 +51,15 @@ contract CapitalStake is Ownable, Pausable, ReentrancyGuard {
 
     uint256 public pendingDuration  = 14 days;
 
+    bool public canDeposit;
+    address public operator;
+    mapping(uint256 => uint256) public userCapacityMax;
 
     // Info of each pool.
     PoolInfo[] public poolInfo;
 
+    /// @notice A record of states for signing / validating signatures
+    mapping(address => uint256) public nonces;
     // Info of each user that stakes LP tokens.
     mapping (uint256 => mapping (address => UserInfo)) public userInfo;
 
@@ -59,11 +68,53 @@ contract CapitalStake is Ownable, Pausable, ReentrancyGuard {
 
     uint256 public startBlock;
 
+
+     /// @notice The EIP-712 typehash for the contract's domain
+    bytes32 public constant DOMAIN_TYPEHASH =
+        keccak256(
+            "EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"
+    );
+
+    /// @notice The EIP-712 typehash for the permit struct used by the contract
+    bytes32 public constant Capital_Unstake_TYPEHASH =
+        keccak256(
+            "CapitalUnstake(uint256 pid,address account,uint256 amount,uint256 nonce,uint256 deadline)"
+    );
+
+        bytes32 public constant Capital_Deposit_TYPEHASH =
+        keccak256(
+            "Deposit(uint256 pid,address account,uint256 amount,uint256 nonce,uint256 deadline)"
+    );
+
+
+
     constructor(address _nsure, uint256 _startBlock) public {
         nsure       = INsure(_nsure);
         startBlock  = _startBlock;
+        userCapacityMax[0] = 100e18;
     }
     
+      function setOperator(address _operator) external onlyOwner {   
+        require(_operator != address(0),"_operator is zero");
+        operator = _operator;
+        emit eSetOperator(_operator);
+    }
+
+    modifier onlyOperator() {
+        require(msg.sender == operator,"not operator");
+        _;
+    }
+
+    function switchDeposit() external onlyOperator {
+        canDeposit = !canDeposit;
+        emit SwitchDeposit(canDeposit);
+    }
+
+    function setUserCapacityMax(uint256 _pid,uint256 _max) external onlyOperator {
+        userCapacityMax[_pid] = _max;
+        emit SetUserCapacityMax(_pid,_max);
+    }
+   
    
     function updateBlockReward(uint256 _newReward) external onlyOwner {
         nsurePerBlock   = _newReward;
@@ -97,7 +148,8 @@ contract CapitalStake is Ownable, Pausable, ReentrancyGuard {
             lpToken: _lpToken,
             allocPoint: _allocPoint,
             lastRewardBlock: lastRewardBlock,
-            accNsurePerShare: 0
+            accNsurePerShare: 0,
+            pending: 0
         }));
 
         emit Add(_allocPoint,_lpToken,_withUpdate);
@@ -165,10 +217,11 @@ contract CapitalStake is Ownable, Pausable, ReentrancyGuard {
 
 
     function deposit(uint256 _pid, uint256 _amount) external whenNotPaused {
+        require(canDeposit,"can not");
         require(_pid < poolInfo.length, "invalid _pid");
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][msg.sender];
-        
+        require(user.amount.add(_amount) <= userCapacityMax[_pid],"exceed the limit");
         updatePool(_pid);
 
       
@@ -190,7 +243,46 @@ contract CapitalStake is Ownable, Pausable, ReentrancyGuard {
 
 
     // unstake, need pending sometime
-    function unstake(uint256 _pid,uint256 _amount) external nonReentrant whenNotPaused {
+    function unstake(
+            uint256 _pid,
+            uint256 _amount,
+            uint8 v,
+            bytes32 r,
+            bytes32 s,
+            uint256 deadline) external nonReentrant whenNotPaused {
+
+   
+        bytes32 domainSeparator =
+            keccak256(
+                abi.encode(
+                    DOMAIN_TYPEHASH,
+                    keccak256(bytes(name)),
+                    keccak256(bytes(version)),
+                    getChainId(),
+                    address(this)
+                )
+            );
+        bytes32 structHash =
+            keccak256(
+                abi.encode(
+                    Capital_Unstake_TYPEHASH,
+                    _pid,
+                    address(msg.sender),
+                    _amount,
+                    nonces[msg.sender]++,
+                    deadline
+                )
+            );
+        bytes32 digest =
+            keccak256(
+                abi.encodePacked("\x19\x01", domainSeparator, structHash)
+            );
+            
+        address signatory = ecrecover(digest, v, r, s);
+        require(signatory != address(0), "invalid signature");
+        require(signatory == signer, "unauthorized");
+        
+
         require(_pid < poolInfo.length , "invalid _pid");
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][msg.sender];
@@ -206,10 +298,80 @@ contract CapitalStake is Ownable, Pausable, ReentrancyGuard {
         user.pendingAt  = block.timestamp;
         user.pendingWithdrawal = user.pendingWithdrawal.add(_amount);
 
+        pool.pending = pool.pending.add(_amount);
+
         safeNsureTransfer(msg.sender, pending);
 
-        emit Unstake(msg.sender,_pid,_amount);
+        emit Unstake(msg.sender,_pid,_amount,nonces[msg.sender]-1);
     }
+
+
+      // unstake, need pending sometime
+    function deposit(
+            uint256 _pid,
+            uint256 _amount,
+            uint8 v,
+            bytes32 r,
+            bytes32 s,
+            uint256 deadline) external nonReentrant whenNotPaused {
+
+   
+        bytes32 domainSeparator =
+            keccak256(
+                abi.encode(
+                    DOMAIN_TYPEHASH,
+                    keccak256(bytes(name)),
+                    keccak256(bytes(version)),
+                    getChainId(),
+                    address(this)
+                )
+            );
+        bytes32 structHash =
+            keccak256(
+                abi.encode(
+                    Capital_Deposit_TYPEHASH,
+                    _pid,
+                    address(msg.sender),
+                    _amount,
+                    nonces[msg.sender]++,
+                    deadline
+                )
+            );
+        bytes32 digest =
+            keccak256(
+                abi.encodePacked("\x19\x01", domainSeparator, structHash)
+            );
+            
+        address signatory = ecrecover(digest, v, r, s);
+        require(signatory != address(0), "invalid signature");
+        require(signatory == signer, "unauthorized");
+        
+
+        require(_pid < poolInfo.length , "invalid _pid");
+        PoolInfo storage pool = poolInfo[_pid];
+        UserInfo storage user = userInfo[_pid][msg.sender];
+        require(user.amount.add(_amount) <= userCapacityMax[_pid],"exceed the limit");
+
+           updatePool(_pid);
+
+      
+        pool.lpToken.safeTransferFrom(address(msg.sender), address(this), _amount);
+
+        uint256 pending = user.amount.mul(pool.accNsurePerShare).div(1e12).sub(user.rewardDebt);
+        
+        user.amount = user.amount.add(_amount);
+        user.rewardDebt = user.amount.mul(pool.accNsurePerShare).div(1e12);
+        
+        pool.amount = pool.amount.add(_amount);
+
+        if(pending > 0){
+            safeNsureTransfer(msg.sender,pending);
+        }
+
+        emit Deposit(msg.sender, _pid, _amount);
+    }
+
+
 
 
     function isPending(uint256 _pid) external view returns (bool,uint256) {
@@ -232,6 +394,7 @@ contract CapitalStake is Ownable, Pausable, ReentrancyGuard {
 
         uint256 amount          = user.pendingWithdrawal;
         pool.amount             = pool.amount.sub(amount);
+        pool.pending            = pool.pending.sub(amount);
 
         user.pendingWithdrawal  = 0;
 
@@ -283,15 +446,26 @@ contract CapitalStake is Ownable, Pausable, ReentrancyGuard {
         }
     }
     
+     function getChainId() internal pure returns (uint256) {
+        uint256 chainId;
+        assembly {
+            chainId := chainid()
+        }
+        return chainId;
+    }
+    
 
     ////////////  event definitions  ////////////
     event Claim(address indexed user,uint256 pid,uint256 amount);
     event Deposit(address indexed user, uint256 indexed pid, uint256 amount);
     event Withdraw(address indexed user, uint256 indexed pid, uint256 amount);
-    event Unstake(address indexed user,uint256 pid, uint256 amount);
+    event Unstake(address indexed user,uint256 pid, uint256 amount,uint256 nonce);
     event UpdateBlockReward(uint256 reward);
     event UpdateWithdrawPending(uint256 duration);
     event Add(uint256 point, IERC20 token, bool update);
     event Set(uint256 pid, uint256 point, bool update);
+    event SwitchDeposit(bool swi);
+    event SetUserCapacityMax(uint256 pid,uint256 max);
+    event eSetOperator(address indexed operator);
     // event EmergencyWithdraw(address indexed user, uint256 indexed pid, uint256 amount);
 }

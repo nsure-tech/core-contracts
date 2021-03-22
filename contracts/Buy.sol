@@ -35,17 +35,18 @@ contract Buy is Ownable, ReentrancyGuard {
 
     struct Order {
         address payable buyer;
-        uint productId;
+        uint256 productId;
         uint256 currency;
         uint256 premium;
         uint256 amount;
         uint256 period;
         uint256 createAt;
         uint8 state;
+        uint256 nonce;
     }
 
     struct ProductStatus {
-        uint status;
+        uint256 status;
     }
 
     address[]  public  divCurrencies;
@@ -135,7 +136,7 @@ contract Buy is Ownable, ReentrancyGuard {
 
 
     function buyInsurance(
-            uint _productId,
+            uint256 _productId,
             uint256 _amount,
             uint256 _cost,
             uint256 period,
@@ -208,6 +209,7 @@ contract Buy is Ownable, ReentrancyGuard {
         _order.createAt = block.timestamp;
         _order.period   = period;
         _order.state    = 0;
+        _order.nonce    = nonces[msg.sender] -1;
 
         emit NewOrder(
             _order

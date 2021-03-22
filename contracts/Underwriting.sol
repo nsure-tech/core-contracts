@@ -22,7 +22,7 @@ pragma solidity ^0.6.0;
 
 
 
-contract LockFunds is Ownable, ReentrancyGuard{
+contract Underwriting is Ownable, ReentrancyGuard{
     
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
@@ -37,7 +37,7 @@ contract LockFunds is Ownable, ReentrancyGuard{
     address public operator;
     
     /// @notice A record of states for signing / validating signatures
-    mapping (address => uint) public nonces;
+    mapping (address => uint256) public nonces;
     
     struct DivCurrency {
         address divCurrency;
@@ -49,7 +49,7 @@ contract LockFunds is Ownable, ReentrancyGuard{
 
     INsure public Nsure;
     uint256 private _totalSupply;
-    uint256 public claimDuration = 1 minutes;
+    uint256 public claimDuration = 30 minutes;
 
     mapping(address => uint256) private _balances;
     mapping(address => uint256) public claimAt;
@@ -121,7 +121,7 @@ contract LockFunds is Ownable, ReentrancyGuard{
         emit SetDepositMax(_max);
     }
 
-    function deposit(uint amount) external nonReentrant{
+    function deposit(uint256 amount) external nonReentrant{
         require(amount > 0, "Cannot stake 0");
         require(amount <= depositMax,"exceeding the maximum limit");
 
@@ -133,7 +133,7 @@ contract LockFunds is Ownable, ReentrancyGuard{
         emit Deposit(msg.sender, amount);
     }
 
-    function withdraw(uint256 _amount,uint deadline,uint8 v, bytes32 r, bytes32 s) 
+    function withdraw(uint256 _amount,uint256 deadline,uint8 v, bytes32 r, bytes32 s) 
         external nonReentrant
     {
         require(_balances[msg.sender] >= _amount,"insufficient");
@@ -151,9 +151,8 @@ contract LockFunds is Ownable, ReentrancyGuard{
         require(block.timestamp <= deadline, "signature expired");
 
         _balances[msg.sender] = _balances[msg.sender].sub(_amount);
-        // Nsure.transfer(msg.sender,_amount);
         Nsure.transfer(msg.sender,_amount);
-        emit Withdraw(msg.sender,_amount);
+        emit Withdraw(msg.sender,_amount,nonces[msg.sender]-1);
     }
 
     // burn 1/2 for claiming 
@@ -172,7 +171,7 @@ contract LockFunds is Ownable, ReentrancyGuard{
         }
     }
 
-    function claim(uint _amount, uint currency, uint deadline, uint8 v, bytes32 r, bytes32 s)
+    function claim(uint256 _amount, uint256 currency, uint256 deadline, uint8 v, bytes32 r, bytes32 s)
         external nonReentrant
     {
         require(block.timestamp > claimAt[msg.sender].add(claimDuration), "wait" );
@@ -192,10 +191,10 @@ contract LockFunds is Ownable, ReentrancyGuard{
         claimAt[msg.sender] = block.timestamp;
         IERC20(divCurrencies[currency].divCurrency).safeTransfer(msg.sender,_amount);
 
-        emit Claim(msg.sender,currency,_amount);
+        emit Claim(msg.sender,currency,_amount,nonces[msg.sender] -1);
     }
 
-    function getChainId() internal pure returns (uint) {
+    function getChainId() internal pure returns (uint256) {
         uint256 chainId;
         assembly { chainId := chainid() }
         return chainId;
@@ -207,9 +206,8 @@ contract LockFunds is Ownable, ReentrancyGuard{
 
 
     event Deposit(address indexed user, uint256 amount);
-    event Withdraw(address indexed user,  uint256 amount);
-    event Unstake(address indexed user,uint256 amount);
-    event Claim(address indexed user,uint256 currency,uint256 amount);
+    event Withdraw(address indexed user,  uint256 amount,uint256 nonce);
+    event Claim(address indexed user,uint256 currency,uint256 amount,uint256 nonce);
     event Burn(address indexed user,uint256 amount);
     event SetOperator(address indexed operator);
     event SetClaimDuration(uint256 duration);

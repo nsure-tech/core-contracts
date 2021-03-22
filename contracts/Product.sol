@@ -13,14 +13,14 @@ pragma solidity ^0.6.0;
 pragma experimental ABIEncoderV2;
 
 contract Product is Ownable {
-    using SafeMath for uint;
+    using SafeMath for uint256;
 
     struct ProductStatus {
-        uint status;
+        uint256 status;
     }
 
     uint256[] public productId;
-    mapping (uint => ProductStatus) private _products;
+    mapping (uint256 => ProductStatus) private _products;
 
     address public operator;
 
@@ -29,20 +29,20 @@ contract Product is Ownable {
         _;
     }
 
-    function getLength() external view returns (uint) {
+    function getLength() external view returns (uint256) {
         return productId.length;
     }
 
 
-    function getProduct(uint _productId) external view returns (ProductStatus memory) {
+    function getProduct(uint256 _productId) external view returns (ProductStatus memory) {
         return _products[_productId];
     }
 
-    function getStatus(uint _productId) external view returns (uint) {
+    function getStatus(uint256 _productId) external view returns (uint256) {
         return _products[_productId].status;
     }
 
-    function addProduct(uint _productId, uint _status) external onlyOperator  {
+    function addProduct(uint256 _productId, uint256 _status) external onlyOperator  {
         for(uint256 i=0;i<productId.length;i++){
             if(productId[i] == _productId){
                 return;
@@ -54,10 +54,10 @@ contract Product is Ownable {
         emit AddProduct(_productId,_status);
     }
 
-    function deleteProduct(uint _productId) external onlyOperator {
+    function deleteProduct(uint256 _productId) external onlyOperator {
         delete _products[_productId];
         
-        for(uint i=0;i<productId.length;i++){
+        for(uint256 i=0;i<productId.length;i++){
             if(productId[i] == _productId){
                 productId[i] = productId[productId.length-1];
                 productId.pop();
@@ -69,7 +69,7 @@ contract Product is Ownable {
 
     }
 
-       function updateStatus(uint _productId,uint _status) public onlyOperator {
+       function updateStatus(uint256 _productId,uint256 _status) public onlyOperator {
          for(uint256 i=0;i<productId.length;i++){
             if(productId[i] == _productId){
                 require(_products[_productId].status != _status, "same status");
@@ -90,8 +90,8 @@ contract Product is Ownable {
     }
 
 
-    event UpdateStatus(uint  product,uint256 status);
-    event DeleteProduct(uint  product);
-    event AddProduct(uint  product,uint256 status);
+    event UpdateStatus(uint256  product,uint256 status);
+    event DeleteProduct(uint256  product);
+    event AddProduct(uint256  product,uint256 status);
     event SetOperator(address indexed operator);
 }

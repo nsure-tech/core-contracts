@@ -29,7 +29,7 @@ contract ClaimPurchaseMint is Ownable, ReentrancyGuard{
     uint256 public deadlineDuration = 30 minutes;
     
     /// @notice A record of states for signing / validating signatures
-    mapping (address => uint) public nonces;
+    mapping (address => uint256) public nonces;
     
 
     INsure public Nsure;
@@ -98,7 +98,7 @@ contract ClaimPurchaseMint is Ownable, ReentrancyGuard{
     }
 
     // claim rewards of purchase rewards
-    function claim(uint _amount, uint deadline, uint8 v, bytes32 r, bytes32 s) external nonReentrant {
+    function claim(uint256 _amount, uint256 deadline, uint8 v, bytes32 r, bytes32 s) external nonReentrant {
         require(block.timestamp > claimAt[msg.sender].add(claimDuration), "wait" );
         require(block.timestamp.add(deadlineDuration) > deadline, "expired");
 
@@ -122,20 +122,20 @@ contract ClaimPurchaseMint is Ownable, ReentrancyGuard{
       
         Nsure.transfer(msg.sender, _amount);
 
-        emit Claim(msg.sender, _amount);
+        emit Claim(msg.sender, _amount,nonces[msg.sender]-1);
       
 
         
     }
 
-    function getChainId() internal pure returns (uint) {
+    function getChainId() internal pure returns (uint256) {
         uint256 chainId;
         assembly { chainId := chainid() }
         return chainId;
     }
     
     
-     event Claim(address indexed user,uint256 amount);
+     event Claim(address indexed user,uint256 amount,uint256 nonce);
     event SetClaimDuration(uint256 duration);
     event SetSigner(address indexed signer);
     event SetDeadlineDuration(uint256 duration);

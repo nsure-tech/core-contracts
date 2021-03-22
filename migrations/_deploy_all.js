@@ -18,7 +18,6 @@ const ClaimPurchaseMint = artifacts.require('ClaimPurchaseMint'); //0
 //   deployer.deploy(Surplus);
 // };
 
-// // //0x6cf83f10234ac1db01baed7e45c52a59c9c66a3b
 // module.exports = function (deployer) {
 //   deployer.deploy(Nsure);
 // };
