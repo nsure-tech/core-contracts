@@ -94,7 +94,6 @@ contract ClaimPurchaseMint is Ownable, ReentrancyGuard{
         Nsure.mint(address(this), nsureReward);
 
         lastRewardBlock = block.number;
-
     }
 
     // claim rewards of purchase rewards
