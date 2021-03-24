@@ -18,7 +18,7 @@ contract Buy is Ownable, ReentrancyGuard {
     string public constant name = "Buy";
     string public constant version = "1";
 
-    address public lockFunds;
+    address public underWriting;
     address public surplus;
     address public treasury;
     IProduct public product;
@@ -28,7 +28,7 @@ contract Buy is Ownable, ReentrancyGuard {
 
     uint256 public orderIndex = 1000;
     uint256 public surplusRate = 40;
-    uint256 public lockFundsRate = 50;
+    uint256 public underWritingRate = 50;
     uint256 public treasuryRate = 10;
     mapping(uint256 => Order) public insuranceOrders;
 
@@ -52,8 +52,8 @@ contract Buy is Ownable, ReentrancyGuard {
     address[]  public  divCurrencies;
 
 
-    constructor(address _lockFunds,address _surplus,address _product,address _weth,address _treasury) public {
-        lockFunds = _lockFunds;
+    constructor(address _underWriting,address _surplus,address _product,address _weth,address _treasury) public {
+        underWriting = _underWriting;
         surplus = _surplus;
         WETH = _weth;
         treasury = _treasury;
@@ -74,10 +74,10 @@ contract Buy is Ownable, ReentrancyGuard {
 
 
     ////////////////// admin ///////////////
-    function setLockFundsAddr(address _lockFundsAddr) external onlyOwner{
-        require(_lockFundsAddr != address(0),"_lockFundsAddr is zero");
-        lockFunds = _lockFundsAddr;
-        emit SetLockFunds(_lockFundsAddr);
+    function setUnderWritingAddr(address _underWritingAddr) external onlyOwner{
+        require(_underWritingAddr != address(0),"_underWritingAddr is zero");
+        underWriting = _underWritingAddr;
+        emit SetUnderWriting(_underWritingAddr);
     }
 
     function setSurplusAddr(address _surplusAddr) external onlyOwner{
@@ -93,12 +93,12 @@ contract Buy is Ownable, ReentrancyGuard {
     }
     
    
-   function setRate(uint256 _lockFundsRate, uint256 _surplusRate, uint256 _treasuryRate) external onlyOwner {
-       require(_lockFundsRate + _surplusRate + _treasuryRate == 100, "not equal 100");
-       lockFundsRate = _lockFundsRate;
+   function setRate(uint256 _underWritingRate, uint256 _surplusRate, uint256 _treasuryRate) external onlyOwner {
+       require(_underWritingRate + _surplusRate + _treasuryRate == 100, "not equal 100");
+       underWritingRate = _underWritingRate;
        surplusRate = _surplusRate;
        treasuryRate = _treasuryRate;
-       emit SetRate(lockFundsRate,surplusRate,treasuryRate);
+       emit SetRate(underWritingRate,surplusRate,treasuryRate);
    }
  
 
@@ -159,7 +159,7 @@ contract Buy is Ownable, ReentrancyGuard {
             IERC20(divCurrencies[currency]).safeTransferFrom(msg.sender,address(this), _cost);
         }
         
-        IERC20(divCurrencies[currency]).safeTransfer(address(lockFunds), _cost.mul(lockFundsRate).div(100));
+        IERC20(divCurrencies[currency]).safeTransfer(address(underWriting), _cost.mul(underWritingRate).div(100));
         IERC20(divCurrencies[currency]).safeTransfer(address(surplus), _cost.mul(surplusRate).div(100));
         IERC20(divCurrencies[currency]).safeTransfer(address(treasury), _cost.mul(treasuryRate).div(100));
         
@@ -226,10 +226,10 @@ contract Buy is Ownable, ReentrancyGuard {
     
     
     event NewOrder(Order);
-    event SetLockFunds(address indexed lockFunds);
+    event SetUnderWriting(address indexed underWriting);
     event SetSurplus(address indexed surplus);
     event SetTreasury(address indexed treasury);
-    event SetRate(uint256 lockFundsRate, uint256 surplusRate, uint256 treasuryRate);
+    event SetRate(uint256 underWritingRate, uint256 surplusRate, uint256 treasuryRate);
     event SetSigner(address indexed signer);
     event AddDivCurrency(address indexed currency);
     event DeleteDivCurrency(address indexed currency);

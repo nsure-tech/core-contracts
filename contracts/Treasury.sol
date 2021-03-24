@@ -226,7 +226,6 @@ contract Underwriting is Ownable, ReentrancyGuard{
     }
 
 
-    receive() external payable {}
    
 
 
