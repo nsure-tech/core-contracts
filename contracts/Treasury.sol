@@ -35,7 +35,7 @@ contract Underwriting is Ownable, ReentrancyGuard{
     string constant public name = "Treasury";
     string public constant version = "1";
     
-    uint256 public depositMax = 1000000e18;
+    uint256 public depositMax = 1 * 1e6 * 1e18;
     uint256 public deadlineDuration = 30 minutes;
     
     address public operator;
@@ -80,7 +80,7 @@ contract Underwriting is Ownable, ReentrancyGuard{
         Nsure = INsure(_nsure);
     }
 
-  receive() external payable {}
+    receive() external payable {}
   
     function totalSupply() external view returns (uint256) {
         return _totalSupply;

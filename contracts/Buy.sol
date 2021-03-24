@@ -159,8 +159,11 @@ contract Buy is Ownable, ReentrancyGuard {
             IERC20(divCurrencies[currency]).safeTransferFrom(msg.sender,address(this), _cost);
         }
         
+        // for underwriter with a value of 50%
         IERC20(divCurrencies[currency]).safeTransfer(address(lockFunds), _cost.mul(lockFundsRate).div(100));
+        // for surplus with a value of 40% which is for insurance claim.
         IERC20(divCurrencies[currency]).safeTransfer(address(surplus), _cost.mul(surplusRate).div(100));
+        // for treasury with a value of 10% which is for auditros etc.
         IERC20(divCurrencies[currency]).safeTransfer(address(treasury), _cost.mul(treasuryRate).div(100));
         
         bytes32 domainSeparator =
