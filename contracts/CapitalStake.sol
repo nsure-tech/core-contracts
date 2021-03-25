@@ -244,6 +244,8 @@ contract CapitalStake is Ownable, Pausable, ReentrancyGuard {
         emit Deposit(msg.sender, _pid, _amount);
     }
 
+    
+
 
     // unstake, need pending sometime
     function unstake(

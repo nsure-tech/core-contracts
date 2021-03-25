@@ -33,8 +33,8 @@ module.exports = async function (deployer) {
   // let capitalConvertUsdt = await CapitalConvert.at(capitalConvertUsdtAddr)
   // let product = await Product.at(productAddr)
   let capitalStake = await CapitalStake.at(capitalStakeAddr)
-  let underwritng = await Underwriting.at(underwritingAddr)
-  let buy = await Buy.at(buyAddr)
+  // let underwritng = await Underwriting.at(underwritingAddr)
+  // let buy = await Buy.at(buyAddr)
 
 
   //
@@ -63,6 +63,8 @@ module.exports = async function (deployer) {
   
   // await capitalStake.add(100,capitalConvertUsdtAddr,true)
   // console.log('capital stake usdt add ok');
+  await capitalStake.setOperator(operater)
+  await capitalStake.switchDeposit()
   
 
   //underwriting
@@ -75,8 +77,8 @@ module.exports = async function (deployer) {
   
 
   //buy
-  await buy.addDivCurrency(wethAddr) 
-  console.log('buy add weth');
+  // await buy.addDivCurrency(wethAddr) 
+  // console.log('buy add weth');
   
   // await buy.addDivCurrency(usdtAddr) 
   // console.log('buy add usdt');
