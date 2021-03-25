@@ -22,7 +22,7 @@ pragma solidity ^0.6.0;
 
 
 
-contract Underwriting is Ownable, ReentrancyGuard{
+contract Treasury is Ownable, ReentrancyGuard{
     
     using SafeMath for uint256;
     using SafeERC20 for IERC20;

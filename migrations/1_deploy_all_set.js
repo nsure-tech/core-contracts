@@ -44,6 +44,7 @@ let underwritingAddr
 let buyAddr
 
 let signer = '0x666747ffD8417a735dFf70264FDf4e29076c775a'
+let operator = '0x666747ffD8417a735dFf70264FDf4e29076c775a'
 
 await deployer.deploy(Merkle)
 console.log('merkle:',Merkle.address);
@@ -95,6 +96,57 @@ console.log('underwriting addr:',Underwriting.address);
 //////address _underwriting,address _surplus,address _product,address _weth,address _treasury
 await deployer.deploy(Buy,signer,Underwriting.address,Surplus.address,Product.address,wethAddr,Treasury.address);
 
+
+//                          set default value           
+ 
+  //product
+
+  let product  = await Product.deployed()
+    await product.setOperator(operator)
+
+  for(let i=1;i<=10;i++){
+    await product.addProduct(i,1)
+    console.log('product add:',i);
+    
+  }
+
+  /////capitalStake
+  let cs = await CapitalStake.deployed()
+  await cs.add(100,CapitalConvert.address ,true)
+  // console.log('capital stake eth add ok');
+  
+  // await capitalStake.add(100,capitalConvertUsdtAddr,true)
+  // console.log('capital stake usdt add ok');
+  
+
+  //underwriting
+  let uw = await Underwriting.deployed()
+  await uw.setOperator(operator)
+  await uw.addDivCurrency(wethAddr,'100000000000000000000')
+  // console.log('lockfund add weth');
+  
+  // await underwritng.addDivCurrency(usdtAddr,'100000000000000000000')
+  // console.log('lockfund add usdt');
+  
+
+  //buy
+  let buy = await Buy.deployed()
+  await buy.addDivCurrency(wethAddr) 
+  console.log('buy add weth');
+  
+  // await buy.addDivCurrency(usdtAddr) 
+  // console.log('buy add usdt');
+  
+
+  //nsure add minter
+  let nsure =await Nsure.deployed()
+  await nsure.addMinter(CapitalConvert.address)
+  // await nsure.addMinter(capitalConvertUsdtAddr)
+  await nsure.addMinter(Underwriting.address)
+  await nsure.addMinter(CapitalStake.address)
+  await nsure.addMinter(ClaimPurchaseMint.address)
+  // console.log('nsure add minter ok');
+  
 
 }
 
