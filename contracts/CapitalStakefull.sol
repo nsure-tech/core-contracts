@@ -1,6 +1,6 @@
 // File: @openzeppelin/contracts/token/ERC20/IERC20.sol
 
-// SPDX-License-Identifier: MIT
+
 
 pragma solidity ^0.6.0;
 
@@ -80,7 +80,7 @@ interface IERC20 {
 
 // File: @openzeppelin/contracts/math/SafeMath.sol
 
-// SPDX-License-Identifier: MIT
+
 
 pragma solidity ^0.6.0;
 
@@ -242,7 +242,7 @@ library SafeMath {
 
 // File: @openzeppelin/contracts/utils/Address.sol
 
-// SPDX-License-Identifier: MIT
+
 
 pragma solidity ^0.6.2;
 
@@ -386,7 +386,7 @@ library Address {
 
 // File: @openzeppelin/contracts/GSN/Context.sol
 
-// SPDX-License-Identifier: MIT
+
 
 pragma solidity ^0.6.0;
 
@@ -413,7 +413,7 @@ abstract contract Context {
 
 // File: @openzeppelin/contracts/token/ERC20/ERC20.sol
 
-// SPDX-License-Identifier: MIT
+
 
 pragma solidity ^0.6.0;
 
@@ -722,7 +722,7 @@ contract ERC20 is Context, IERC20 {
 
 // File: @openzeppelin/contracts/access/Ownable.sol
 
-// SPDX-License-Identifier: MIT
+
 
 pragma solidity ^0.6.0;
 
@@ -791,9 +791,166 @@ contract Ownable is Context {
     }
 }
 
+// File: @openzeppelin/contracts/utils/Pausable.sol
+
+
+
+pragma solidity ^0.6.0;
+
+
+/**
+ * @dev Contract module which allows children to implement an emergency stop
+ * mechanism that can be triggered by an authorized account.
+ *
+ * This module is used through inheritance. It will make available the
+ * modifiers `whenNotPaused` and `whenPaused`, which can be applied to
+ * the functions of your contract. Note that they will not be pausable by
+ * simply including this module, only once the modifiers are put in place.
+ */
+contract Pausable is Context {
+    /**
+     * @dev Emitted when the pause is triggered by `account`.
+     */
+    event Paused(address account);
+
+    /**
+     * @dev Emitted when the pause is lifted by `account`.
+     */
+    event Unpaused(address account);
+
+    bool private _paused;
+
+    /**
+     * @dev Initializes the contract in unpaused state.
+     */
+    constructor () internal {
+        _paused = false;
+    }
+
+    /**
+     * @dev Returns true if the contract is paused, and false otherwise.
+     */
+    function paused() public view returns (bool) {
+        return _paused;
+    }
+
+    /**
+     * @dev Modifier to make a function callable only when the contract is not paused.
+     *
+     * Requirements:
+     *
+     * - The contract must not be paused.
+     */
+    modifier whenNotPaused() {
+        require(!_paused, "Pausable: paused");
+        _;
+    }
+
+    /**
+     * @dev Modifier to make a function callable only when the contract is paused.
+     *
+     * Requirements:
+     *
+     * - The contract must be paused.
+     */
+    modifier whenPaused() {
+        require(_paused, "Pausable: not paused");
+        _;
+    }
+
+    /**
+     * @dev Triggers stopped state.
+     *
+     * Requirements:
+     *
+     * - The contract must not be paused.
+     */
+    function _pause() internal virtual whenNotPaused {
+        _paused = true;
+        emit Paused(_msgSender());
+    }
+
+    /**
+     * @dev Returns to normal state.
+     *
+     * Requirements:
+     *
+     * - The contract must be paused.
+     */
+    function _unpause() internal virtual whenPaused {
+        _paused = false;
+        emit Unpaused(_msgSender());
+    }
+}
+
+// File: @openzeppelin/contracts/utils/ReentrancyGuard.sol
+
+
+
+pragma solidity ^0.6.0;
+
+/**
+ * @dev Contract module that helps prevent reentrant calls to a function.
+ *
+ * Inheriting from `ReentrancyGuard` will make the {nonReentrant} modifier
+ * available, which can be applied to functions to make sure there are no nested
+ * (reentrant) calls to them.
+ *
+ * Note that because there is a single `nonReentrant` guard, functions marked as
+ * `nonReentrant` may not call one another. This can be worked around by making
+ * those functions `private`, and then adding `external` `nonReentrant` entry
+ * points to them.
+ *
+ * TIP: If you would like to learn more about reentrancy and alternative ways
+ * to protect against it, check out our blog post
+ * https://blog.openzeppelin.com/reentrancy-after-istanbul/[Reentrancy After Istanbul].
+ */
+contract ReentrancyGuard {
+    // Booleans are more expensive than uint256 or any type that takes up a full
+    // word because each write operation emits an extra SLOAD to first read the
+    // slot's contents, replace the bits taken up by the boolean, and then write
+    // back. This is the compiler's defense against contract upgrades and
+    // pointer aliasing, and it cannot be disabled.
+
+    // The values being non-zero value makes deployment a bit more expensive,
+    // but in exchange the refund on every call to nonReentrant will be lower in
+    // amount. Since refunds are capped to a percentage of the total
+    // transaction's gas, it is best to keep them low in cases like this one, to
+    // increase the likelihood of the full refund coming into effect.
+    uint256 private constant _NOT_ENTERED = 1;
+    uint256 private constant _ENTERED = 2;
+
+    uint256 private _status;
+
+    constructor () internal {
+        _status = _NOT_ENTERED;
+    }
+
+    /**
+     * @dev Prevents a contract from calling itself, directly or indirectly.
+     * Calling a `nonReentrant` function from another `nonReentrant`
+     * function is not supported. It is possible to prevent this from happening
+     * by making the `nonReentrant` function external, and make it call a
+     * `private` function that does the actual work.
+     */
+    modifier nonReentrant() {
+        // On the first call to nonReentrant, _notEntered will be true
+        require(_status != _ENTERED, "ReentrancyGuard: reentrant call");
+
+        // Any calls to nonReentrant after this point will fail
+        _status = _ENTERED;
+
+        _;
+
+        // By storing the original value once again, a refund is triggered (see
+        // https://eips.ethereum.org/EIPS/eip-2200)
+        _status = _NOT_ENTERED;
+    }
+}
+
 // File: @openzeppelin/contracts/token/ERC20/SafeERC20.sol
 
-// SPDX-License-Identifier: MIT
+
 
 pragma solidity ^0.6.0;
 
@@ -868,351 +1025,6 @@ library SafeERC20 {
     }
 }
 
-// File: @openzeppelin/contracts/utils/EnumerableSet.sol
-
-// SPDX-License-Identifier: MIT
-
-pragma solidity ^0.6.0;
-
-/**
- * @dev Library for managing
- * https://en.wikipedia.org/wiki/Set_(abstract_data_type)[sets] of primitive
- * types.
- *
- * Sets have the following properties:
- *
- * - Elements are added, removed, and checked for existence in constant time
- * (O(1)).
- * - Elements are enumerated in O(n). No guarantees are made on the ordering.
- *
- * ```
- * contract Example {
- *     // Add the library methods
- *     using EnumerableSet for EnumerableSet.AddressSet;
- *
- *     // Declare a set state variable
- *     EnumerableSet.AddressSet private mySet;
- * }
- * ```
- *
- * As of v3.0.0, only sets of type `address` (`AddressSet`) and `uint256`
- * (`UintSet`) are supported.
- */
-library EnumerableSet {
-    // To implement this library for multiple types with as little code
-    // repetition as possible, we write it in terms of a generic Set type with
-    // bytes32 values.
-    // The Set implementation uses private functions, and user-facing
-    // implementations (such as AddressSet) are just wrappers around the
-    // underlying Set.
-    // This means that we can only create new EnumerableSets for types that fit
-    // in bytes32.
-
-    struct Set {
-        // Storage of set values
-        bytes32[] _values;
-
-        // Position of the value in the `values` array, plus 1 because index 0
-        // means a value is not in the set.
-        mapping (bytes32 => uint256) _indexes;
-    }
-
-    /**
-     * @dev Add a value to a set. O(1).
-     *
-     * Returns true if the value was added to the set, that is if it was not
-     * already present.
-     */
-    function _add(Set storage set, bytes32 value) private returns (bool) {
-        if (!_contains(set, value)) {
-            set._values.push(value);
-            // The value is stored at length-1, but we add 1 to all indexes
-            // and use 0 as a sentinel value
-            set._indexes[value] = set._values.length;
-            return true;
-        } else {
-            return false;
-        }
-    }
-
-    /**
-     * @dev Removes a value from a set. O(1).
-     *
-     * Returns true if the value was removed from the set, that is if it was
-     * present.
-     */
-    function _remove(Set storage set, bytes32 value) private returns (bool) {
-        // We read and store the value's index to prevent multiple reads from the same storage slot
-        uint256 valueIndex = set._indexes[value];
-
-        if (valueIndex != 0) { // Equivalent to contains(set, value)
-            // To delete an element from the _values array in O(1), we swap the element to delete with the last one in
-            // the array, and then remove the last element (sometimes called as 'swap and pop').
-            // This modifies the order of the array, as noted in {at}.
-
-            uint256 toDeleteIndex = valueIndex - 1;
-            uint256 lastIndex = set._values.length - 1;
-
-            // When the value to delete is the last one, the swap operation is unnecessary. However, since this occurs
-            // so rarely, we still do the swap anyway to avoid the gas cost of adding an 'if' statement.
-
-            bytes32 lastvalue = set._values[lastIndex];
-
-            // Move the last value to the index where the value to delete is
-            set._values[toDeleteIndex] = lastvalue;
-            // Update the index for the moved value
-            set._indexes[lastvalue] = toDeleteIndex + 1; // All indexes are 1-based
-
-            // Delete the slot where the moved value was stored
-            set._values.pop();
-
-            // Delete the index for the deleted slot
-            delete set._indexes[value];
-
-            return true;
-        } else {
-            return false;
-        }
-    }
-
-    /**
-     * @dev Returns true if the value is in the set. O(1).
-     */
-    function _contains(Set storage set, bytes32 value) private view returns (bool) {
-        return set._indexes[value] != 0;
-    }
-
-    /**
-     * @dev Returns the number of values on the set. O(1).
-     */
-    function _length(Set storage set) private view returns (uint256) {
-        return set._values.length;
-    }
-
-   /**
-    * @dev Returns the value stored at position `index` in the set. O(1).
-    *
-    * Note that there are no guarantees on the ordering of values inside the
-    * array, and it may change when more values are added or removed.
-    *
-    * Requirements:
-    *
-    * - `index` must be strictly less than {length}.
-    */
-    function _at(Set storage set, uint256 index) private view returns (bytes32) {
-        require(set._values.length > index, "EnumerableSet: index out of bounds");
-        return set._values[index];
-    }
-
-    // AddressSet
-
-    struct AddressSet {
-        Set _inner;
-    }
-
-    /**
-     * @dev Add a value to a set. O(1).
-     *
-     * Returns true if the value was added to the set, that is if it was not
-     * already present.
-     */
-    function add(AddressSet storage set, address value) internal returns (bool) {
-        return _add(set._inner, bytes32(uint256(value)));
-    }
-
-    /**
-     * @dev Removes a value from a set. O(1).
-     *
-     * Returns true if the value was removed from the set, that is if it was
-     * present.
-     */
-    function remove(AddressSet storage set, address value) internal returns (bool) {
-        return _remove(set._inner, bytes32(uint256(value)));
-    }
-
-    /**
-     * @dev Returns true if the value is in the set. O(1).
-     */
-    function contains(AddressSet storage set, address value) internal view returns (bool) {
-        return _contains(set._inner, bytes32(uint256(value)));
-    }
-
-    /**
-     * @dev Returns the number of values in the set. O(1).
-     */
-    function length(AddressSet storage set) internal view returns (uint256) {
-        return _length(set._inner);
-    }
-
-   /**
-    * @dev Returns the value stored at position `index` in the set. O(1).
-    *
-    * Note that there are no guarantees on the ordering of values inside the
-    * array, and it may change when more values are added or removed.
-    *
-    * Requirements:
-    *
-    * - `index` must be strictly less than {length}.
-    */
-    function at(AddressSet storage set, uint256 index) internal view returns (address) {
-        return address(uint256(_at(set._inner, index)));
-    }
-
-
-    // UintSet
-
-    struct UintSet {
-        Set _inner;
-    }
-
-    /**
-     * @dev Add a value to a set. O(1).
-     *
-     * Returns true if the value was added to the set, that is if it was not
-     * already present.
-     */
-    function add(UintSet storage set, uint256 value) internal returns (bool) {
-        return _add(set._inner, bytes32(value));
-    }
-
-    /**
-     * @dev Removes a value from a set. O(1).
-     *
-     * Returns true if the value was removed from the set, that is if it was
-     * present.
-     */
-    function remove(UintSet storage set, uint256 value) internal returns (bool) {
-        return _remove(set._inner, bytes32(value));
-    }
-
-    /**
-     * @dev Returns true if the value is in the set. O(1).
-     */
-    function contains(UintSet storage set, uint256 value) internal view returns (bool) {
-        return _contains(set._inner, bytes32(value));
-    }
-
-    /**
-     * @dev Returns the number of values on the set. O(1).
-     */
-    function length(UintSet storage set) internal view returns (uint256) {
-        return _length(set._inner);
-    }
-
-   /**
-    * @dev Returns the value stored at position `index` in the set. O(1).
-    *
-    * Note that there are no guarantees on the ordering of values inside the
-    * array, and it may change when more values are added or removed.
-    *
-    * Requirements:
-    *
-    * - `index` must be strictly less than {length}.
-    */
-    function at(UintSet storage set, uint256 index) internal view returns (uint256) {
-        return uint256(_at(set._inner, index));
-    }
-}
-
-// File: @openzeppelin/contracts/math/Math.sol
-
-// SPDX-License-Identifier: MIT
-
-pragma solidity ^0.6.0;
-
-/**
- * @dev Standard math utilities missing in the Solidity language.
- */
-library Math {
-    /**
-     * @dev Returns the largest of two numbers.
-     */
-    function max(uint256 a, uint256 b) internal pure returns (uint256) {
-        return a >= b ? a : b;
-    }
-
-    /**
-     * @dev Returns the smallest of two numbers.
-     */
-    function min(uint256 a, uint256 b) internal pure returns (uint256) {
-        return a < b ? a : b;
-    }
-
-    /**
-     * @dev Returns the average of two numbers. The result is rounded towards
-     * zero.
-     */
-    function average(uint256 a, uint256 b) internal pure returns (uint256) {
-        // (a + b) / 2 can overflow, so we distribute
-        return (a / 2) + (b / 2) + ((a % 2 + b % 2) / 2);
-    }
-}
-
-// File: @openzeppelin/contracts/utils/ReentrancyGuard.sol
-
-// SPDX-License-Identifier: MIT
-
-pragma solidity ^0.6.0;
-
-/**
- * @dev Contract module that helps prevent reentrant calls to a function.
- *
- * Inheriting from `ReentrancyGuard` will make the {nonReentrant} modifier
- * available, which can be applied to functions to make sure there are no nested
- * (reentrant) calls to them.
- *
- * Note that because there is a single `nonReentrant` guard, functions marked as
- * `nonReentrant` may not call one another. This can be worked around by making
- * those functions `private`, and then adding `external` `nonReentrant` entry
- * points to them.
- *
- * TIP: If you would like to learn more about reentrancy and alternative ways
- * to protect against it, check out our blog post
- * https://blog.openzeppelin.com/reentrancy-after-istanbul/[Reentrancy After Istanbul].
- */
-contract ReentrancyGuard {
-    // Booleans are more expensive than uint256 or any type that takes up a full
-    // word because each write operation emits an extra SLOAD to first read the
-    // slot's contents, replace the bits taken up by the boolean, and then write
-    // back. This is the compiler's defense against contract upgrades and
-    // pointer aliasing, and it cannot be disabled.
-
-    // The values being non-zero value makes deployment a bit more expensive,
-    // but in exchange the refund on every call to nonReentrant will be lower in
-    // amount. Since refunds are capped to a percentage of the total
-    // transaction's gas, it is best to keep them low in cases like this one, to
-    // increase the likelihood of the full refund coming into effect.
-    uint256 private constant _NOT_ENTERED = 1;
-    uint256 private constant _ENTERED = 2;
-
-    uint256 private _status;
-
-    constructor () internal {
-        _status = _NOT_ENTERED;
-    }
-
-    /**
-     * @dev Prevents a contract from calling itself, directly or indirectly.
-     * Calling a `nonReentrant` function from another `nonReentrant`
-     * function is not supported. It is possible to prevent this from happening
-     * by making the `nonReentrant` function external, and make it call a
-     * `private` function that does the actual work.
-     */
-    modifier nonReentrant() {
-        // On the first call to nonReentrant, _notEntered will be true
-        require(_status != _ENTERED, "ReentrancyGuard: reentrant call");
-
-        // Any calls to nonReentrant after this point will fail
-        _status = _ENTERED;
-
-        _;
-
-        // By storing the original value once again, a refund is triggered (see
-        // https://eips.ethereum.org/EIPS/eip-2200)
-        _status = _NOT_ENTERED;
-    }
-}
-
 // File: contracts/interfaces/INsure.sol
 
 pragma solidity ^0.6.0;
@@ -1226,248 +1038,492 @@ interface INsure {
     function balanceOf(address account) external view returns (uint256);
 }
 
-// File: contracts/Treasury.sol
+// File: contracts/CapitalStake.sol
 
 /**
- * @dev     a contract for locking Nsure Token to be an underwriter.
- *   
- * @notice  the underwriter program would be calculated and recorded by central ways
-            which is too complicated for contracts(gas used etc.)
+ * @dev Capital mining contract. Need stake here to earn rewards after converting to nTokens.
  */
-
-
-
-
-
-
-
-
-
-
-
 
 pragma solidity ^0.6.0;
 
 
 
-contract Treasury is Ownable, ReentrancyGuard{
-    
+
+
+
+
+
+
+
+
+
+
+
+
+contract CapitalStake is Ownable, Pausable, ReentrancyGuard {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
-    
 
-    address public constant ETHEREUM = address(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE);
-
-
-    address public signer; 
-    string constant public name = "Treasury";
+    address public signer;
+    string public constant name = "CapitalStake";
     string public constant version = "1";
-    
-    uint256 public depositMax = 1 * 1e6 * 1e18;
-    uint256 public deadlineDuration = 30 minutes;
-    
+    // Info of each user.
+    struct UserInfo {
+        uint256 amount;     // How many  tokens the user has provided.
+        uint256 rewardDebt; // Reward debt. See explanation below.
+        uint256 reward;
+
+        uint256 pendingWithdrawal;  // payments available for withdrawal by an investor
+        uint256 pendingAt;
+    }
+
+    // Info of each pool.
+    struct PoolInfo {
+        uint256 amount;             //Total Deposit of token
+        IERC20 lpToken;             // Address of token contract.
+        uint256 allocPoint;
+        uint256 lastRewardBlock;
+        uint256 accNsurePerShare;
+        uint256 pending;
+    }
+ 
+    INsure public nsure;
+    uint256 public nsurePerBlock    = 18 * 1e17;
+
+    uint256 public pendingDuration  = 14 days;
+
+    mapping(uint256 => uint256) public capacityMax;
+
+    bool public canDeposit = true;
     address public operator;
-    
+
+    // the max capacity for one user's deposit.
+    mapping(uint256 => uint256) public userCapacityMax;
+
+    // Info of each pool.
+    PoolInfo[] public poolInfo;
+
     /// @notice A record of states for signing / validating signatures
-    mapping (address => uint256) public nonces;
-    
-    struct DivCurrency {
-        address divCurrency;
-        uint256 limit;
+    mapping(address => uint256) public nonces;
+    // Info of each user that stakes LP tokens.
+    mapping (uint256 => mapping (address => UserInfo)) public userInfo;
+
+    // Total allocation poitns. Must be the sum of all allocation points in all pools.
+    uint256 public totalAllocPoint = 0;
+
+    uint256 public startBlock;
+
+
+     /// @notice The EIP-712 typehash for the contract's domain
+    bytes32 public constant DOMAIN_TYPEHASH =
+        keccak256(
+            "EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"
+    );
+
+    /// @notice The EIP-712 typehash for the permit struct used by the contract
+    bytes32 public constant Capital_Unstake_TYPEHASH =
+        keccak256(
+            "CapitalUnstake(uint256 pid,address account,uint256 amount,uint256 nonce,uint256 deadline)"
+    );
+
+    bytes32 public constant Capital_Deposit_TYPEHASH =
+        keccak256(
+            "Deposit(uint256 pid,address account,uint256 amount,uint256 nonce,uint256 deadline)"
+    );
+
+
+
+    constructor(address _signer, address _nsure, uint256 _startBlock) public {
+        nsure       = INsure(_nsure);
+        startBlock  = _startBlock;
+        userCapacityMax[0] = 10e18;
+        signer = _signer;
     }
     
-    DivCurrency[] public divCurrencies;
-    
-
-    INsure public Nsure;
-    uint256 private _totalSupply;
-    uint256 public claimDuration = 30 minutes;
-
-    mapping(address => uint256) private _balances;
-    mapping(address => uint256) public claimAt;
-
-   
+      function setOperator(address _operator) external onlyOwner {   
+        require(_operator != address(0),"_operator is zero");
+        operator = _operator;
+        emit eSetOperator(_operator);
+    }
 
     modifier onlyOperator() {
         require(msg.sender == operator,"not operator");
         _;
     }
 
-      /// @notice The EIP-712 typehash for the contract's domain
-    bytes32 public constant DOMAIN_TYPEHASH = keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)");
-
- 
-    /// @notice The EIP-712 typehash for the permit struct used by the contract
-    bytes32 public constant CLAIM_TYPEHASH = keccak256("Claim(address account,uint256 currency,uint256 amount,uint256 nonce,uint256 deadline)");
-
-
-    /// @notice The EIP-712 typehash for the permit struct used by the contract
-    bytes32 public constant WITHDRAW_TYPEHASH = keccak256("Withdraw(address account,uint256 amount,uint256 nonce,uint256 deadline)");
-
-    constructor(address _signer, address _nsure)public {
-        Nsure = INsure(_nsure);
-        signer = _signer;
+    function switchDeposit() external onlyOperator {
+        canDeposit = !canDeposit;
+        emit SwitchDeposit(canDeposit);
     }
 
-    receive() external payable {}
-  
-    function totalSupply() external view returns (uint256) {
-        return _totalSupply;
+    function setUserCapacityMax(uint256 _pid,uint256 _max) external onlyOperator {
+        userCapacityMax[_pid] = _max;
+        emit SetUserCapacityMax(_pid,_max);
     }
 
-    function balanceOf(address account) external view returns (uint256) {
-        return _balances[account];
+    function setCapacityMax(uint256 _pid,uint256 _max) external onlyOperator {
+        capacityMax[_pid] = _max;
+        emit SetCapacityMax(_pid,_max);
+    }
+   
+   
+   
+    function updateBlockReward(uint256 _newReward) external onlyOwner {
+        nsurePerBlock   = _newReward;
+        emit UpdateBlockReward(_newReward);
     }
 
+    function updateWithdrawPending(uint256 _seconds) external onlyOwner {
+        pendingDuration = _seconds;
+        emit UpdateWithdrawPending(_seconds);
+    }
 
-  // payout for claiming
-    function payouts(address payable _to, uint256 _amount, address token) external onlyOperator {
-         require(_to != address(0),"_to is zero");
-        if (token != ETHEREUM) {
-            IERC20(token).safeTransfer(_to, _amount);
-        } else {
-            _to.transfer(_amount);
+    function poolLength() public view returns (uint256) {
+        return poolInfo.length;
+    }
+
+    // Add a new lp to the pool. Can only be called by the owner.
+    function add(uint256 _allocPoint, IERC20 _lpToken, bool _withUpdate) onlyOwner external {
+        require(address(_lpToken) != address(0),"_lpToken is zero");
+        for(uint256 i=0; i<poolLength(); i++) {
+            require(address(_lpToken) != address(poolInfo[i].lpToken), "Duplicate Token!");
         }
 
-        emit ePayouts(_to, _amount);
+        if (_withUpdate) {
+            massUpdatePools();
+        }
+
+        uint256 lastRewardBlock = block.number > startBlock ? block.number : startBlock;
+        totalAllocPoint = totalAllocPoint.add(_allocPoint);
+        poolInfo.push(PoolInfo({
+            amount:0,
+            lpToken: _lpToken,
+            allocPoint: _allocPoint,
+            lastRewardBlock: lastRewardBlock,
+            accNsurePerShare: 0,
+            pending: 0
+        }));
+
+        emit Add(_allocPoint,_lpToken,_withUpdate);
+    }
+
+    function set(uint256 _pid, uint256 _allocPoint, bool _withUpdate)  onlyOwner external {
+        require(_pid < poolInfo.length , "invalid _pid");
+        if (_withUpdate) {
+            massUpdatePools();
+        }
+
+        totalAllocPoint = totalAllocPoint.sub(poolInfo[_pid].allocPoint).add(_allocPoint);
+        poolInfo[_pid].allocPoint = _allocPoint;
+        emit Set(_pid,_allocPoint,_withUpdate);
+    }
+
+    function getMultiplier(uint256 _from, uint256 _to) public pure returns (uint256) {
+        return _to.sub(_from);
+    }
+
+    function pendingNsure(uint256 _pid, address _user) external view returns (uint256) {
+        PoolInfo storage pool = poolInfo[_pid];
+        UserInfo storage user = userInfo[_pid][_user];
+
+        uint256 accNsurePerShare = pool.accNsurePerShare;
+        uint256 lpSupply = pool.lpToken.balanceOf(address(this));
+        if (block.number > pool.lastRewardBlock && lpSupply != 0) {
+            uint256 multiplier = getMultiplier(pool.lastRewardBlock, block.number);
+            uint256 nsureReward = multiplier.mul(nsurePerBlock).mul(pool.allocPoint).div(totalAllocPoint);
+            accNsurePerShare = accNsurePerShare.add(nsureReward.mul(1e12).div(lpSupply));
+        }
+
+        return user.amount.mul(accNsurePerShare).div(1e12).sub(user.rewardDebt);
     }
 
 
-    // return my token balance
-    function myBalanceOf(address tokenAddress) external view returns(uint256) {
-        return IERC20(tokenAddress).balanceOf(address(this));
+    function massUpdatePools() public {
+        uint256 length = poolInfo.length;
+        for (uint256 pid = 0; pid < length; ++pid) {
+            updatePool(pid);
+        }
     }
+
+    function updatePool(uint256 _pid) public {
+        require(_pid < poolInfo.length, "invalid _pid");
+        PoolInfo storage pool = poolInfo[_pid];
+        if (block.number <= pool.lastRewardBlock) {
+            return;
+        }
+        uint256 lpSupply = pool.lpToken.balanceOf(address(this));
+        if (lpSupply == 0) {
+            pool.lastRewardBlock = block.number;
+            return;
+        }
+
+        uint256 multiplier = getMultiplier(pool.lastRewardBlock, block.number);
+        uint256 nsureReward = multiplier.mul(nsurePerBlock).mul(pool.allocPoint).div(totalAllocPoint);
+
+        bool mintRet = nsure.mint(address(this), nsureReward);
+        if(mintRet) {
+            pool.accNsurePerShare = pool.accNsurePerShare.add(nsureReward.mul(1e12).div(lpSupply));
+            pool.lastRewardBlock = block.number;
+        }
+    }
+
+
+    function deposit(uint256 _pid, uint256 _amount) external whenNotPaused {
+        require(canDeposit, "can not");
+        require(_pid < poolInfo.length, "invalid _pid");
+        PoolInfo storage pool = poolInfo[_pid];
+        UserInfo storage user = userInfo[_pid][msg.sender];
+        require(user.amount.add(_amount) <= userCapacityMax[_pid],"exceed user's limit");
+        require(pool.amount.add(_amount) <= capacityMax[_pid],"exceed the total limit");
+        updatePool(_pid);
+
+      
+        pool.lpToken.safeTransferFrom(address(msg.sender), address(this), _amount);
+
+        uint256 pending = user.amount.mul(pool.accNsurePerShare).div(1e12).sub(user.rewardDebt);
+        
+        user.amount = user.amount.add(_amount);
+        user.rewardDebt = user.amount.mul(pool.accNsurePerShare).div(1e12);
+        
+        pool.amount = pool.amount.add(_amount);
+
+        if(pending > 0){
+            safeNsureTransfer(msg.sender,pending);
+        }
+
+        emit Deposit(msg.sender, _pid, _amount);
+    }
+
     
-    function setClaimDuration(uint256 _duration)external onlyOwner {
-        require(claimDuration != _duration, "the same duration");
-        claimDuration = _duration;
-        emit SetClaimDuration(_duration);
-    }
 
-    function setSigner(address _signer) external onlyOwner {
-        require(_signer != address(0),"_signer is zero");
-        signer = _signer;
-        emit SetSigner(_signer);
-    }
- 
-    function setOperator(address _operator) external onlyOwner {  
-        require(_operator != address(0),"_operator is zero"); 
-        operator = _operator;
-        emit SetOperator(_operator);
-    }
 
-    function setDeadlineDuration(uint256 _duration) external onlyOwner {
-        deadlineDuration = _duration;
-        emit SetDeadlineDuration(_duration);
-    }
- 
-    function getDivCurrencyLength() external view returns (uint256) {
-        return divCurrencies.length;
-    }
+    // unstake, need pending sometime
+    function unstake(
+            uint256 _pid,
+            uint256 _amount,
+            uint8 v,
+            bytes32 r,
+            bytes32 s,
+            uint256 deadline) external nonReentrant whenNotPaused {
 
-    function addDivCurrency(address _currency,uint256 _limit) external onlyOwner {
-        require(_currency != address(0),"_currency is zero");
-        divCurrencies.push(DivCurrency({divCurrency:_currency, limit:_limit}));
-    }
-
-    function setDepositMax(uint256 _max) external onlyOwner {
-        depositMax = _max;
-        emit SetDepositMax(_max);
-    }
-
-    function deposit(uint256 amount) external nonReentrant{
-        require(amount > 0, "Cannot stake 0");
-        require(amount <= depositMax,"exceeding the maximum limit");
-
-        _totalSupply = _totalSupply.add(amount);
-        _balances[msg.sender] = _balances[msg.sender].add(amount);
-
-        // Nsure.transferFrom(msg.sender, address(this), amount);
-        Nsure.transferFrom(msg.sender,address(this),amount);
-        emit Deposit(msg.sender, amount);
-    }
-
-    function withdraw(uint256 _amount,uint256 deadline,uint8 v, bytes32 r, bytes32 s) 
-        external nonReentrant
-    {
-        require(_balances[msg.sender] >= _amount,"insufficient");
-
-        bytes32 domainSeparator =   keccak256(abi.encode(DOMAIN_TYPEHASH, keccak256(bytes(name)),
-                                        keccak256(bytes(version)), getChainId(), address(this)));
-        bytes32 structHash  = keccak256(abi.encode(WITHDRAW_TYPEHASH, address(msg.sender), 
-                                _amount,nonces[msg.sender]++, deadline));
-        bytes32 digest      = keccak256(abi.encodePacked("\x19\x01", domainSeparator, structHash));
-
+   
+        bytes32 domainSeparator =
+            keccak256(
+                abi.encode(
+                    DOMAIN_TYPEHASH,
+                    keccak256(bytes(name)),
+                    keccak256(bytes(version)),
+                    getChainId(),
+                    address(this)
+                )
+            );
+        bytes32 structHash =
+            keccak256(
+                abi.encode(
+                    Capital_Unstake_TYPEHASH,
+                    _pid,
+                    address(msg.sender),
+                    _amount,
+                    nonces[msg.sender]++,
+                    deadline
+                )
+            );
+        bytes32 digest =
+            keccak256(
+                abi.encodePacked("\x19\x01", domainSeparator, structHash)
+            );
+            
         address signatory = ecrecover(digest, v, r, s);
-
-        require(signatory != address(0), "invalid signature");
-        require(signatory == signer, "unauthorized");
-        require(block.timestamp <= deadline, "signature expired");
-
-        _balances[msg.sender] = _balances[msg.sender].sub(_amount);
-        Nsure.transfer(msg.sender,_amount);
-        emit Withdraw(msg.sender,_amount,nonces[msg.sender]-1);
-    }
-
-    // burn 1/2 for claiming 
-    function burnOuts(address[] calldata _burnUsers, uint256[] calldata _amounts) 
-        external onlyOperator 
-    {
-        require(_burnUsers.length == _amounts.length, "not equal");
-
-        for(uint256 i = 0; i<_burnUsers.length; i++) {
-            require(_balances[_burnUsers[i]] >= _amounts[i], "insufficient");
-
-            _balances[_burnUsers[i]] = _balances[_burnUsers[i]].sub(_amounts[i]);
-            Nsure.burn(_amounts[i]);
-
-            emit Burn(_burnUsers[i],_amounts[i]);
-        }
-    }
-
-    function claim(uint256 _amount, uint256 currency, uint256 deadline, uint8 v, bytes32 r, bytes32 s)
-        external nonReentrant
-    {
-        require(block.timestamp > claimAt[msg.sender].add(claimDuration), "wait" );
-        require(block.timestamp.add(deadlineDuration) > deadline, "expired");
-        require(_amount <= divCurrencies[currency].limit, "exceeding the maximum limit");
-        require(block.timestamp <= deadline, "signature expired");
-
-        bytes32 domainSeparator = keccak256(abi.encode(DOMAIN_TYPEHASH, keccak256(bytes(name)),keccak256(bytes(version)), getChainId(), address(this)));
-        bytes32 structHash = keccak256(abi.encode(CLAIM_TYPEHASH,address(msg.sender), currency, _amount,nonces[msg.sender]++, deadline));
-        bytes32 digest = keccak256(abi.encodePacked("\x19\x01", domainSeparator, structHash));
-        address signatory = ecrecover(digest, v, r, s);
-
         require(signatory != address(0), "invalid signature");
         require(signatory == signer, "unauthorized");
         
 
-        claimAt[msg.sender] = block.timestamp;
-        IERC20(divCurrencies[currency].divCurrency).safeTransfer(msg.sender,_amount);
+        require(_pid < poolInfo.length , "invalid _pid");
+        PoolInfo storage pool = poolInfo[_pid];
+        UserInfo storage user = userInfo[_pid][msg.sender];
 
-        emit Claim(msg.sender,currency,_amount,nonces[msg.sender] -1);
+        require(user.amount >= _amount, "unstake: insufficient assets");
+
+        updatePool(_pid);
+        uint256 pending = user.amount.mul(pool.accNsurePerShare).div(1e12).sub(user.rewardDebt);
+       
+        user.amount     = user.amount.sub(_amount);
+        user.rewardDebt = user.amount.mul(pool.accNsurePerShare).div(1e12);
+
+        user.pendingAt  = block.timestamp;
+        user.pendingWithdrawal = user.pendingWithdrawal.add(_amount);
+
+        pool.pending = pool.pending.add(_amount);
+
+        safeNsureTransfer(msg.sender, pending);
+
+        emit Unstake(msg.sender,_pid,_amount,nonces[msg.sender]-1);
     }
 
-    function getChainId() internal pure returns (uint256) {
-        uint256 chainId;
-        assembly { chainId := chainid() }
-        return chainId;
-    }
 
+      // unstake, need pending sometime
+      // won't use this function, for we don't use it now.
+    function deposit(
+            uint256 _pid,
+            uint256 _amount,
+            uint8 v,
+            bytes32 r,
+            bytes32 s,
+            uint256 deadline) external nonReentrant whenNotPaused {
 
    
+        bytes32 domainSeparator =
+            keccak256(
+                abi.encode(
+                    DOMAIN_TYPEHASH,
+                    keccak256(bytes(name)),
+                    keccak256(bytes(version)),
+                    getChainId(),
+                    address(this)
+                )
+            );
+        bytes32 structHash =
+            keccak256(
+                abi.encode(
+                    Capital_Deposit_TYPEHASH,
+                    _pid,
+                    address(msg.sender),
+                    _amount,
+                    nonces[msg.sender]++,
+                    deadline
+                )
+            );
+        bytes32 digest =
+            keccak256(
+                abi.encodePacked("\x19\x01", domainSeparator, structHash)
+            );
+            
+        address signatory = ecrecover(digest, v, r, s);
+        require(signatory != address(0), "invalid signature");
+        require(signatory == signer, "unauthorized");
+        
+
+        require(_pid < poolInfo.length , "invalid _pid");
+        PoolInfo storage pool = poolInfo[_pid];
+        UserInfo storage user = userInfo[_pid][msg.sender];
+        require(user.amount.add(_amount) <= userCapacityMax[_pid],"exceed user's limit");
+        require(pool.amount.add(_amount) <= capacityMax[_pid],"exceed the total limit");
+        updatePool(_pid);
+
+      
+        pool.lpToken.safeTransferFrom(address(msg.sender), address(this), _amount);
+
+        uint256 pending = user.amount.mul(pool.accNsurePerShare).div(1e12).sub(user.rewardDebt);
+        
+        user.amount = user.amount.add(_amount);
+        user.rewardDebt = user.amount.mul(pool.accNsurePerShare).div(1e12);
+        
+        pool.amount = pool.amount.add(_amount);
+
+        if(pending > 0){
+            safeNsureTransfer(msg.sender,pending);
+        }
+
+        emit DepositSign(msg.sender, _pid, _amount,nonces[msg.sender] - 1);
+    }
 
 
-    event Deposit(address indexed user, uint256 amount);
-    event Withdraw(address indexed user,  uint256 amount,uint256 nonce);
-    event Claim(address indexed user,uint256 currency,uint256 amount,uint256 nonce);
-    event Burn(address indexed user,uint256 amount);
-    event SetOperator(address indexed operator);
-    event SetClaimDuration(uint256 duration);
-    event SetSigner(address indexed signer);
-    event SetDeadlineDuration(uint256 deadlineDuration);
-    event SetDepositMax(uint256 depositMax);
-        /////////// events /////////////
-    event ePayouts(address indexed to, uint256 amount);
+
+
+    function isPending(uint256 _pid) external view returns (bool,uint256) {
+        UserInfo storage user = userInfo[_pid][msg.sender];
+        if(block.timestamp >= user.pendingAt.add(pendingDuration)) {
+            return (false,0);
+        }
+
+        return (true,user.pendingAt.add(pendingDuration).sub(block.timestamp));
+    }
+    
+    // when it's pending while a claim occurs, the value of the withdrawal will decrease as usual
+    // so we keep the claim function by this tool.
+    function withdraw(uint256 _pid) external nonReentrant whenNotPaused {
+        require(_pid < poolInfo.length , "invalid _pid");
+        PoolInfo storage pool = poolInfo[_pid];
+        UserInfo storage user = userInfo[_pid][msg.sender];
+
+        require(block.timestamp >= user.pendingAt.add(pendingDuration), "still pending");
+
+        uint256 amount          = user.pendingWithdrawal;
+        pool.amount             = pool.amount.sub(amount);
+        pool.pending            = pool.pending.sub(amount);
+
+        user.pendingWithdrawal  = 0;
+
+        pool.lpToken.safeTransfer(address(msg.sender), amount);
+
+     
+        
+        emit Withdraw(msg.sender, _pid, amount);
+    }
+
+    //claim reward
+    function claim(uint256 _pid) external nonReentrant whenNotPaused {
+        require(_pid < poolInfo.length , "invalid _pid");
+        PoolInfo storage pool = poolInfo[_pid];
+        UserInfo storage user = userInfo[_pid][msg.sender];
+
+        updatePool(_pid);
+
+        uint256 pending = user.amount.mul(pool.accNsurePerShare).div(1e12).sub(user.rewardDebt);
+        safeNsureTransfer(msg.sender, pending);
+
+        user.rewardDebt = user.amount.mul(pool.accNsurePerShare).div(1e12);
+
+        emit Claim(msg.sender, _pid, pending);
+    }
+
+    // we don't support this function due to the claim process..
+    // or guys will step over the claim events via this function. 
+    // function emergencyWithdraw(uint256 _pid) public {
+    //     PoolInfo storage pool = poolInfo[_pid];
+    //     UserInfo storage user = userInfo[_pid][msg.sender];
+    //     pool.lpToken.safeTransfer(address(msg.sender), user.amount);
+
+    //     emit EmergencyWithdraw(msg.sender, _pid, user.amount);
+
+    //     user.amount = 0;
+    //     user.rewardDebt = 0;
+    // }
+
+    function safeNsureTransfer(address _to, uint256 _amount) internal {
+        require(_to != address(0),"_to is zero");
+        uint256 nsureBal = nsure.balanceOf(address(this));
+        if (_amount > nsureBal) {
+            // nsure.transfer(_to, nsureBal);
+            nsure.transfer(_to,nsureBal);
+        } else {
+            // nsure.transfer(_to, _amount);
+            nsure.transfer(_to,_amount);
+        }
+    }
+    
+     function getChainId() internal pure returns (uint256) {
+        uint256 chainId;
+        assembly {
+            chainId := chainid()
+        }
+        return chainId;
+    }
+    
+
+    ////////////  event definitions  ////////////
+    event Claim(address indexed user,uint256 pid,uint256 amount);
+    event Deposit(address indexed user, uint256 indexed pid, uint256 amount);
+    event DepositSign(address indexed user, uint256 indexed pid, uint256 amount, uint256 nonce);
+    event Withdraw(address indexed user, uint256 indexed pid, uint256 amount);
+    event Unstake(address indexed user,uint256 pid, uint256 amount,uint256 nonce);
+    event UpdateBlockReward(uint256 reward);
+    event UpdateWithdrawPending(uint256 duration);
+    event Add(uint256 point, IERC20 token, bool update);
+    event Set(uint256 pid, uint256 point, bool update);
+    event SwitchDeposit(bool swi);
+    event SetUserCapacityMax(uint256 pid,uint256 max);
+    event SetCapacityMax(uint256 pid, uint256 max);
     event eSetOperator(address indexed operator);
+    // event EmergencyWithdraw(address indexed user, uint256 indexed pid, uint256 amount);
 }

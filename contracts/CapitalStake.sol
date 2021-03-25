@@ -51,6 +51,8 @@ contract CapitalStake is Ownable, Pausable, ReentrancyGuard {
 
     uint256 public pendingDuration  = 14 days;
 
+    mapping(uint256 => uint256) public capacityMax;
+
     bool public canDeposit = true;
     address public operator;
 
@@ -117,6 +119,12 @@ contract CapitalStake is Ownable, Pausable, ReentrancyGuard {
         userCapacityMax[_pid] = _max;
         emit SetUserCapacityMax(_pid,_max);
     }
+
+    function setCapacityMax(uint256 _pid,uint256 _max) external onlyOperator {
+        capacityMax[_pid] = _max;
+        emit SetCapacityMax(_pid,_max);
+    }
+   
    
    
     function updateBlockReward(uint256 _newReward) external onlyOwner {
@@ -224,7 +232,8 @@ contract CapitalStake is Ownable, Pausable, ReentrancyGuard {
         require(_pid < poolInfo.length, "invalid _pid");
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][msg.sender];
-        require(user.amount.add(_amount) <= userCapacityMax[_pid],"exceed the limit");
+        require(user.amount.add(_amount) <= userCapacityMax[_pid],"exceed user's limit");
+        require(pool.amount.add(_amount) <= capacityMax[_pid],"exceed the total limit");
         updatePool(_pid);
 
       
@@ -356,9 +365,9 @@ contract CapitalStake is Ownable, Pausable, ReentrancyGuard {
         require(_pid < poolInfo.length , "invalid _pid");
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][msg.sender];
-        require(user.amount.add(_amount) <= userCapacityMax[_pid],"exceed the limit");
-
-           updatePool(_pid);
+        require(user.amount.add(_amount) <= userCapacityMax[_pid],"exceed user's limit");
+        require(pool.amount.add(_amount) <= capacityMax[_pid],"exceed the total limit");
+        updatePool(_pid);
 
       
         pool.lpToken.safeTransferFrom(address(msg.sender), address(this), _amount);
@@ -473,6 +482,7 @@ contract CapitalStake is Ownable, Pausable, ReentrancyGuard {
     event Set(uint256 pid, uint256 point, bool update);
     event SwitchDeposit(bool swi);
     event SetUserCapacityMax(uint256 pid,uint256 max);
+    event SetCapacityMax(uint256 pid, uint256 max);
     event eSetOperator(address indexed operator);
     // event EmergencyWithdraw(address indexed user, uint256 indexed pid, uint256 amount);
 }
