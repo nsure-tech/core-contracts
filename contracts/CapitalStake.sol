@@ -142,7 +142,7 @@ contract CapitalStake is Ownable, Pausable, ReentrancyGuard {
     }
 
     // Add a new lp to the pool. Can only be called by the owner.
-    function add(uint256 _allocPoint, IERC20 _lpToken, bool _withUpdate) onlyOwner external {
+    function add(uint256 _allocPoint, IERC20 _lpToken, bool _withUpdate,uint256 maxCapacity) onlyOwner external {
         require(address(_lpToken) != address(0),"_lpToken is zero");
         for(uint256 i=0; i<poolLength(); i++) {
             require(address(_lpToken) != address(poolInfo[i].lpToken), "Duplicate Token!");
@@ -152,6 +152,7 @@ contract CapitalStake is Ownable, Pausable, ReentrancyGuard {
             massUpdatePools();
         }
 
+        capacityMax[poolInfo.length] = _max;
         uint256 lastRewardBlock = block.number > startBlock ? block.number : startBlock;
         totalAllocPoint = totalAllocPoint.add(_allocPoint);
         poolInfo.push(PoolInfo({
@@ -163,6 +164,7 @@ contract CapitalStake is Ownable, Pausable, ReentrancyGuard {
             pending: 0
         }));
 
+        
         emit Add(_allocPoint,_lpToken,_withUpdate);
     }
 
