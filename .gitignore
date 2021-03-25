@@ -4,5 +4,4 @@ node_modules
 artifacts
 .DS_Store
 build
-flatten
 migrationstest
