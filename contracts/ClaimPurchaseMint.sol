@@ -20,7 +20,7 @@ contract ClaimPurchaseMint is Ownable, ReentrancyGuard{
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
     
-    address public signer = 0x666747ffD8417a735dFf70264FDf4e29076c775a; 
+    address public signer; 
     string constant public name = "Claim";
     string public constant version = "1";
 
@@ -48,10 +48,11 @@ contract ClaimPurchaseMint is Ownable, ReentrancyGuard{
     bytes32 public constant CLAIM_TYPEHASH = keccak256("Claim(address account,uint256 amount,uint256 nonce,uint256 deadline)");
 
 
-    constructor(address _nsure, uint256 startBlock) public {
+    constructor(address _signer,address _nsure, uint256 startBlock) public {
         Nsure = INsure(_nsure);
 
         lastRewardBlock = block.number > startBlock ? block.number : startBlock;
+        signer = _signer;
     }
 
     function totalSupply() external view returns (uint256) {
@@ -108,7 +109,7 @@ contract ClaimPurchaseMint is Ownable, ReentrancyGuard{
         bytes32 domainSeparator =   keccak256(abi.encode(DOMAIN_TYPEHASH, keccak256(bytes(name)),
                                         keccak256(bytes(version)), getChainId(), address(this)));
         bytes32 structHash =        keccak256(abi.encode(CLAIM_TYPEHASH,address(msg.sender), 
-                                        _amount,nonces[msg.sender]++, deadline));
+                                        _amount, nonces[msg.sender]++, deadline));
 
         bytes32 digest      = keccak256(abi.encodePacked("\x19\x01", domainSeparator, structHash));
         address signatory   = ecrecover(digest, v, r, s);
@@ -121,7 +122,7 @@ contract ClaimPurchaseMint is Ownable, ReentrancyGuard{
       
         Nsure.transfer(msg.sender, _amount);
 
-        emit Claim(msg.sender, _amount,nonces[msg.sender]-1);
+        emit Claim(msg.sender, _amount, nonces[msg.sender]-1);
       
 
         
@@ -134,7 +135,7 @@ contract ClaimPurchaseMint is Ownable, ReentrancyGuard{
     }
     
     
-     event Claim(address indexed user,uint256 amount,uint256 nonce);
+    event Claim(address indexed user, uint256 amount, uint256 nonce);
     event SetClaimDuration(uint256 duration);
     event SetSigner(address indexed signer);
     event SetDeadlineDuration(uint256 duration);

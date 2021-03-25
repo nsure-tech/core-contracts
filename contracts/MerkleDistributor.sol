@@ -3,24 +3,38 @@ pragma solidity >=0.6.11;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/cryptography/MerkleProof.sol";
-import "../interfaces/IMerkleDistributor.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 
-contract MerkleDistributor is IMerkleDistributor {
-    address public immutable override token;
-    bytes32 public immutable override merkleRoot;
-
+contract MerkleDistributor is Ownable {
+    address public  token;
+    bytes32 public  merkleRoot;
+    uint256 public nonce;
     // This is a packed array of booleans.
-    mapping(uint256 => uint256) private claimedBitMap;
+    mapping(uint256 => mapping(uint256 => uint256)) private claimedBitMap;
 
-    constructor(address token_, bytes32 merkleRoot_) public {
+    // constructor(address token_, bytes32 merkleRoot_) public {
+    //     token = token_;
+    //     merkleRoot = merkleRoot_;
+    //     nonce ++;
+    // }
+
+    function setToken(address token_) external onlyOwner {
         token = token_;
-        merkleRoot = merkleRoot_;
     }
 
-    function isClaimed(uint256 index) public view override returns (bool) {
+    function setMerkleRoot (bytes32 merkleRoot_) external onlyOwner {
+        merkleRoot = merkleRoot_;
+        nonce ++;
+    }
+
+    function setNonce(uint256 nonce_) external onlyOwner {
+        nonce = nonce_;
+    }
+
+    function isClaimed(uint256 index) public view returns (bool) {
         uint256 claimedWordIndex = index / 256;
         uint256 claimedBitIndex = index % 256;
-        uint256 claimedWord = claimedBitMap[claimedWordIndex];
+        uint256 claimedWord = claimedBitMap[nonce][claimedWordIndex];
         uint256 mask = (1 << claimedBitIndex);
         return claimedWord & mask == mask;
     }
@@ -28,10 +42,10 @@ contract MerkleDistributor is IMerkleDistributor {
     function _setClaimed(uint256 index) private {
         uint256 claimedWordIndex = index / 256;
         uint256 claimedBitIndex = index % 256;
-        claimedBitMap[claimedWordIndex] = claimedBitMap[claimedWordIndex] | (1 << claimedBitIndex);
+        claimedBitMap[nonce][claimedWordIndex] = claimedBitMap[nonce][claimedWordIndex] | (1 << claimedBitIndex);
     }
 
-    function claim(uint256 index, address account, uint256 amount, bytes32[] calldata merkleProof) external override {
+    function claim(uint256 index, address account, uint256 amount, bytes32[] calldata merkleProof) external {
         require(!isClaimed(index), 'MerkleDistributor: Drop already claimed.');
 
         // Verify the merkle proof.
@@ -44,4 +58,6 @@ contract MerkleDistributor is IMerkleDistributor {
 
         emit Claimed(index, account, amount);
     }
+
+     event Claimed(uint256 index, address account, uint256 amount);
 }

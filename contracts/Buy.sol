@@ -14,7 +14,7 @@ contract Buy is Ownable, ReentrancyGuard {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
     address public WETH;
-    address public signer = 0x666747ffD8417a735dFf70264FDf4e29076c775a;
+    address public signer;
     string public constant name = "Buy";
     string public constant version = "1";
 
@@ -52,12 +52,13 @@ contract Buy is Ownable, ReentrancyGuard {
     address[]  public  divCurrencies;
 
 
-    constructor(address _underWriting,address _surplus,address _product,address _weth,address _treasury) public {
+    constructor(address _signer,address _underWriting,address _surplus,address _product,address _weth,address _treasury) public {
         underWriting = _underWriting;
         surplus = _surplus;
         WETH = _weth;
         treasury = _treasury;
         product = IProduct(_product);
+        signer = _signer;
     }
 
     /// @notice The EIP-712 typehash for the contract's domain
@@ -159,8 +160,11 @@ contract Buy is Ownable, ReentrancyGuard {
             IERC20(divCurrencies[currency]).safeTransferFrom(msg.sender,address(this), _cost);
         }
         
+        // for underwriter with a value of 50%
         IERC20(divCurrencies[currency]).safeTransfer(address(underWriting), _cost.mul(underWritingRate).div(100));
+        // for surplus with a value of 40% which is for insurance claim.
         IERC20(divCurrencies[currency]).safeTransfer(address(surplus), _cost.mul(surplusRate).div(100));
+        // for treasury with a value of 10% which is for auditros etc.
         IERC20(divCurrencies[currency]).safeTransfer(address(treasury), _cost.mul(treasuryRate).div(100));
         
         bytes32 domainSeparator =

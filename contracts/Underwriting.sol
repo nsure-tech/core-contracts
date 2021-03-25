@@ -27,7 +27,7 @@ contract Underwriting is Ownable, ReentrancyGuard{
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
     
-    address public signer = 0x666747ffD8417a735dFf70264FDf4e29076c775a; 
+    address public signer; 
     string constant public name = "Stake";
     string public constant version = "1";
     
@@ -72,8 +72,9 @@ contract Underwriting is Ownable, ReentrancyGuard{
     /// @notice The EIP-712 typehash for the permit struct used by the contract
     bytes32 public constant WITHDRAW_TYPEHASH = keccak256("Withdraw(address account,uint256 amount,uint256 nonce,uint256 deadline)");
 
-    constructor(address _nsure)public {
+    constructor(address _signer, address _nsure)public {
         Nsure = INsure(_nsure);
+        signer = _signer;
     }
 
     function totalSupply() external view returns (uint256) {

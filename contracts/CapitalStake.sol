@@ -23,7 +23,7 @@ contract CapitalStake is Ownable, Pausable, ReentrancyGuard {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
-    address public signer = 0x666747ffD8417a735dFf70264FDf4e29076c775a;
+    address public signer;
     string public constant name = "CapitalStake";
     string public constant version = "1";
     // Info of each user.
@@ -51,8 +51,10 @@ contract CapitalStake is Ownable, Pausable, ReentrancyGuard {
 
     uint256 public pendingDuration  = 14 days;
 
-    bool public canDeposit;
+    bool public canDeposit = true;
     address public operator;
+
+    // the max capacity for one user's deposit.
     mapping(uint256 => uint256) public userCapacityMax;
 
     // Info of each pool.
@@ -81,17 +83,18 @@ contract CapitalStake is Ownable, Pausable, ReentrancyGuard {
             "CapitalUnstake(uint256 pid,address account,uint256 amount,uint256 nonce,uint256 deadline)"
     );
 
-        bytes32 public constant Capital_Deposit_TYPEHASH =
+    bytes32 public constant Capital_Deposit_TYPEHASH =
         keccak256(
             "Deposit(uint256 pid,address account,uint256 amount,uint256 nonce,uint256 deadline)"
     );
 
 
 
-    constructor(address _nsure, uint256 _startBlock) public {
+    constructor(address _signer, address _nsure, uint256 _startBlock) public {
         nsure       = INsure(_nsure);
         startBlock  = _startBlock;
-        userCapacityMax[0] = 100e18;
+        userCapacityMax[0] = 10e18;
+        signer = _signer;
     }
     
       function setOperator(address _operator) external onlyOwner {   
@@ -217,7 +220,7 @@ contract CapitalStake is Ownable, Pausable, ReentrancyGuard {
 
 
     function deposit(uint256 _pid, uint256 _amount) external whenNotPaused {
-        require(canDeposit,"can not");
+        require(canDeposit, "can not");
         require(_pid < poolInfo.length, "invalid _pid");
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][msg.sender];
@@ -307,6 +310,7 @@ contract CapitalStake is Ownable, Pausable, ReentrancyGuard {
 
 
       // unstake, need pending sometime
+      // won't use this function, for we don't use it now.
     function deposit(
             uint256 _pid,
             uint256 _amount,
@@ -368,7 +372,7 @@ contract CapitalStake is Ownable, Pausable, ReentrancyGuard {
             safeNsureTransfer(msg.sender,pending);
         }
 
-        emit Deposit(msg.sender, _pid, _amount);
+        emit DepositSign(msg.sender, _pid, _amount,nonces[msg.sender] - 1);
     }
 
 
@@ -458,6 +462,7 @@ contract CapitalStake is Ownable, Pausable, ReentrancyGuard {
     ////////////  event definitions  ////////////
     event Claim(address indexed user,uint256 pid,uint256 amount);
     event Deposit(address indexed user, uint256 indexed pid, uint256 amount);
+    event DepositSign(address indexed user, uint256 indexed pid, uint256 amount, uint256 nonce);
     event Withdraw(address indexed user, uint256 indexed pid, uint256 amount);
     event Unstake(address indexed user,uint256 pid, uint256 amount,uint256 nonce);
     event UpdateBlockReward(uint256 reward);
