@@ -1146,6 +1146,12 @@ contract CapitalStake is Ownable, Pausable, ReentrancyGuard {
         emit eSetOperator(_operator);
     }
 
+    function setSigner(address _signer) external onlyOwner {
+        require(_signer != address(0), "_signer is zero");
+        signer = _signer;
+        emit eSetSigner(_signer);
+    }
+
     modifier onlyOperator() {
         require(msg.sender == operator,"not operator");
         _;
@@ -1527,5 +1533,6 @@ contract CapitalStake is Ownable, Pausable, ReentrancyGuard {
     event SetUserCapacityMax(uint256 pid,uint256 max);
     event SetCapacityMax(uint256 pid, uint256 max);
     event eSetOperator(address indexed operator);
+    event eSetSigner(address indexed signer);
     // event EmergencyWithdraw(address indexed user, uint256 indexed pid, uint256 amount);
 }
