@@ -1,6 +1,6 @@
 // File: @openzeppelin/contracts/token/ERC20/IERC20.sol
 
-// SPDX-License-Identifier: MIT
+
 
 pragma solidity ^0.6.0;
 
@@ -80,7 +80,7 @@ interface IERC20 {
 
 // File: @openzeppelin/contracts/math/SafeMath.sol
 
-// SPDX-License-Identifier: MIT
+
 
 pragma solidity ^0.6.0;
 
@@ -242,7 +242,7 @@ library SafeMath {
 
 // File: @openzeppelin/contracts/utils/Address.sol
 
-// SPDX-License-Identifier: MIT
+
 
 pragma solidity ^0.6.2;
 
@@ -386,7 +386,7 @@ library Address {
 
 // File: @openzeppelin/contracts/GSN/Context.sol
 
-// SPDX-License-Identifier: MIT
+
 
 pragma solidity ^0.6.0;
 
@@ -413,7 +413,7 @@ abstract contract Context {
 
 // File: @openzeppelin/contracts/token/ERC20/ERC20.sol
 
-// SPDX-License-Identifier: MIT
+
 
 pragma solidity ^0.6.0;
 
@@ -722,7 +722,7 @@ contract ERC20 is Context, IERC20 {
 
 // File: @openzeppelin/contracts/access/Ownable.sol
 
-// SPDX-License-Identifier: MIT
+
 
 pragma solidity ^0.6.0;
 
@@ -793,7 +793,7 @@ contract Ownable is Context {
 
 // File: @openzeppelin/contracts/utils/Pausable.sol
 
-// SPDX-License-Identifier: MIT
+
 
 pragma solidity ^0.6.0;
 
@@ -885,7 +885,7 @@ contract Pausable is Context {
 
 // File: @openzeppelin/contracts/utils/ReentrancyGuard.sol
 
-// SPDX-License-Identifier: MIT
+
 
 pragma solidity ^0.6.0;
 
@@ -950,7 +950,7 @@ contract ReentrancyGuard {
 
 // File: @openzeppelin/contracts/token/ERC20/SafeERC20.sol
 
-// SPDX-License-Identifier: MIT
+
 
 pragma solidity ^0.6.0;
 
@@ -1151,17 +1151,17 @@ contract CapitalStake is Ownable, Pausable, ReentrancyGuard {
         _;
     }
 
-    function switchDeposit() external onlyOperator {
+    function switchDeposit() external onlyOwner {
         canDeposit = !canDeposit;
         emit SwitchDeposit(canDeposit);
     }
 
-    function setUserCapacityMax(uint256 _pid,uint256 _max) external onlyOperator {
+    function setUserCapacityMax(uint256 _pid,uint256 _max) external onlyOwner {
         userCapacityMax[_pid] = _max;
         emit SetUserCapacityMax(_pid,_max);
     }
 
-    function setCapacityMax(uint256 _pid,uint256 _max) external onlyOperator {
+    function setCapacityMax(uint256 _pid,uint256 _max) external onlyOwner {
         capacityMax[_pid] = _max;
         emit SetCapacityMax(_pid,_max);
     }
@@ -1275,7 +1275,7 @@ contract CapitalStake is Ownable, Pausable, ReentrancyGuard {
         require(_pid < poolInfo.length, "invalid _pid");
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][msg.sender];
-        require(user.amount.add(_amount) <= userCapacityMax[_pid],"exceed user's limit");
+        require(user.amount.add(_amount) <= userCapacityMax[_pid],"exceed user limit");
         require(pool.amount.add(_amount) <= capacityMax[_pid],"exceed the total limit");
         updatePool(_pid);
 

@@ -110,17 +110,17 @@ contract CapitalStake is Ownable, Pausable, ReentrancyGuard {
         _;
     }
 
-    function switchDeposit() external onlyOperator {
+    function switchDeposit() external onlyOwner {
         canDeposit = !canDeposit;
         emit SwitchDeposit(canDeposit);
     }
 
-    function setUserCapacityMax(uint256 _pid,uint256 _max) external onlyOperator {
+    function setUserCapacityMax(uint256 _pid,uint256 _max) external onlyOwner {
         userCapacityMax[_pid] = _max;
         emit SetUserCapacityMax(_pid,_max);
     }
 
-    function setCapacityMax(uint256 _pid,uint256 _max) external onlyOperator {
+    function setCapacityMax(uint256 _pid,uint256 _max) external onlyOwner {
         capacityMax[_pid] = _max;
         emit SetCapacityMax(_pid,_max);
     }
@@ -234,7 +234,7 @@ contract CapitalStake is Ownable, Pausable, ReentrancyGuard {
         require(_pid < poolInfo.length, "invalid _pid");
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][msg.sender];
-        require(user.amount.add(_amount) <= userCapacityMax[_pid],"exceed user's limit");
+        require(user.amount.add(_amount) <= userCapacityMax[_pid],"exceed user limit");
         require(pool.amount.add(_amount) <= capacityMax[_pid],"exceed the total limit");
         updatePool(_pid);
 

@@ -158,7 +158,7 @@ contract Underwriting is Ownable, ReentrancyGuard{
 
     // burn 1/2 for claiming
     function burnOuts(address[] calldata _burnUsers, uint256[] calldata _amounts) 
-        external onlyOperator 
+        external onlyOperator
     {
         require(_burnUsers.length == _amounts.length, "not equal");
 

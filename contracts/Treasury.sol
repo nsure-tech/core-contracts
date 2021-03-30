@@ -92,7 +92,7 @@ contract Treasury is Ownable, ReentrancyGuard{
     }
 
 
-  // payout for claiming
+    // payout for claiming
     function payouts(address payable _to, uint256 _amount, address token) external onlyOperator {
          require(_to != address(0),"_to is zero");
         if (token != ETHEREUM) {

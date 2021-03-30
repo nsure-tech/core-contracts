@@ -42,7 +42,7 @@ contract Product is Ownable {
         return _products[_productId].status;
     }
 
-    function addProduct(uint256 _productId, uint256 _status) external onlyOperator  {
+    function addProduct(uint256 _productId, uint256 _status) external onlyOperator {
         for(uint256 i=0;i<productId.length;i++){
             if(productId[i] == _productId){
                 return;
@@ -69,17 +69,16 @@ contract Product is Ownable {
 
     }
 
-       function updateStatus(uint256 _productId,uint256 _status) public onlyOperator {
-         for(uint256 i=0;i<productId.length;i++){
+    function updateStatus(uint256 _productId, uint256 _status) public onlyOperator {
+        for(uint256 i=0;i<productId.length;i++){
             if(productId[i] == _productId){
                 require(_products[_productId].status != _status, "same status");
-                 _products[_productId].status = _status;
-                 emit UpdateStatus(_productId,_status);
-                 
+                    _products[_productId].status = _status;
+                    emit UpdateStatus(_productId,_status);
+                    
                 return;
             }
         }
-
     }
 
 

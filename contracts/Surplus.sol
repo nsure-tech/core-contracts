@@ -29,7 +29,7 @@ contract Surplus is Ownable {
 
     // payout for claiming
     function payouts(address payable _to, uint256 _amount,address token) external onlyOperator {
-        require(_to != address(0),"_to is zero");
+        require(_to != address(0), "_to is zero");
         if (token != ETHEREUM) {
             IERC20(token).safeTransfer(_to, _amount);
         } else {
@@ -43,13 +43,13 @@ contract Surplus is Ownable {
     
 
     function setOperator(address _operator) external onlyOwner {   
-        require(_operator != address(0),"_operator is zero");
+        require(_operator != address(0), "_operator is zero");
         operator = _operator;
         emit eSetOperator(_operator);
     }
 
     modifier onlyOperator() {
-        require(msg.sender == operator,"not operator");
+        require(msg.sender == operator, "not operator");
         _;
     }
 
