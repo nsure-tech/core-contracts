@@ -1048,7 +1048,7 @@ contract CapitalConverter is ERC20, Ownable, Pausable, ReentrancyGuard {
 
     address public constant ETHEREUM = address(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE);
 
-    uint256 public maxConvert = 1000e18;
+    uint256 public maxConvert = 10000e18;
     address public token;
     uint256 public tokenDecimal;
 

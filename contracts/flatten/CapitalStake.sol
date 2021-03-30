@@ -1136,7 +1136,7 @@ contract CapitalStake is Ownable, Pausable, ReentrancyGuard {
     constructor(address _signer, address _nsure, uint256 _startBlock) public {
         nsure       = INsure(_nsure);
         startBlock  = _startBlock;
-        userCapacityMax[0] = 10e18;
+        userCapacityMax[0] = 10000e18;
         signer = _signer;
     }
     
