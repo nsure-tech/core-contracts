@@ -1092,6 +1092,8 @@ contract CapitalStake is Ownable, Pausable, ReentrancyGuard {
 
     uint256 public pendingDuration  = 14 days;
 
+    mapping(uint256 => uint256) public capacityMax;
+
     bool public canDeposit = true;
     address public operator;
 
@@ -1158,6 +1160,12 @@ contract CapitalStake is Ownable, Pausable, ReentrancyGuard {
         userCapacityMax[_pid] = _max;
         emit SetUserCapacityMax(_pid,_max);
     }
+
+    function setCapacityMax(uint256 _pid,uint256 _max) external onlyOperator {
+        capacityMax[_pid] = _max;
+        emit SetCapacityMax(_pid,_max);
+    }
+   
    
    
     function updateBlockReward(uint256 _newReward) external onlyOwner {
@@ -1175,7 +1183,7 @@ contract CapitalStake is Ownable, Pausable, ReentrancyGuard {
     }
 
     // Add a new lp to the pool. Can only be called by the owner.
-    function add(uint256 _allocPoint, IERC20 _lpToken, bool _withUpdate) onlyOwner external {
+    function add(uint256 _allocPoint, IERC20 _lpToken, bool _withUpdate,uint256 maxCapacity) onlyOwner external {
         require(address(_lpToken) != address(0),"_lpToken is zero");
         for(uint256 i=0; i<poolLength(); i++) {
             require(address(_lpToken) != address(poolInfo[i].lpToken), "Duplicate Token!");
@@ -1185,6 +1193,7 @@ contract CapitalStake is Ownable, Pausable, ReentrancyGuard {
             massUpdatePools();
         }
 
+        capacityMax[poolInfo.length] = maxCapacity;
         uint256 lastRewardBlock = block.number > startBlock ? block.number : startBlock;
         totalAllocPoint = totalAllocPoint.add(_allocPoint);
         poolInfo.push(PoolInfo({
@@ -1196,6 +1205,7 @@ contract CapitalStake is Ownable, Pausable, ReentrancyGuard {
             pending: 0
         }));
 
+        
         emit Add(_allocPoint,_lpToken,_withUpdate);
     }
 
@@ -1265,7 +1275,8 @@ contract CapitalStake is Ownable, Pausable, ReentrancyGuard {
         require(_pid < poolInfo.length, "invalid _pid");
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][msg.sender];
-        require(user.amount.add(_amount) <= userCapacityMax[_pid],"exceed the limit");
+        require(user.amount.add(_amount) <= userCapacityMax[_pid],"exceed user's limit");
+        require(pool.amount.add(_amount) <= capacityMax[_pid],"exceed the total limit");
         updatePool(_pid);
 
       
@@ -1284,6 +1295,8 @@ contract CapitalStake is Ownable, Pausable, ReentrancyGuard {
 
         emit Deposit(msg.sender, _pid, _amount);
     }
+
+    
 
 
     // unstake, need pending sometime
@@ -1395,9 +1408,9 @@ contract CapitalStake is Ownable, Pausable, ReentrancyGuard {
         require(_pid < poolInfo.length , "invalid _pid");
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][msg.sender];
-        require(user.amount.add(_amount) <= userCapacityMax[_pid],"exceed the limit");
-
-           updatePool(_pid);
+        require(user.amount.add(_amount) <= userCapacityMax[_pid],"exceed user's limit");
+        require(pool.amount.add(_amount) <= capacityMax[_pid],"exceed the total limit");
+        updatePool(_pid);
 
       
         pool.lpToken.safeTransferFrom(address(msg.sender), address(this), _amount);
@@ -1512,6 +1525,7 @@ contract CapitalStake is Ownable, Pausable, ReentrancyGuard {
     event Set(uint256 pid, uint256 point, bool update);
     event SwitchDeposit(bool swi);
     event SetUserCapacityMax(uint256 pid,uint256 max);
+    event SetCapacityMax(uint256 pid, uint256 max);
     event eSetOperator(address indexed operator);
     // event EmergencyWithdraw(address indexed user, uint256 indexed pid, uint256 amount);
 }

@@ -152,7 +152,7 @@ contract CapitalStake is Ownable, Pausable, ReentrancyGuard {
             massUpdatePools();
         }
 
-        capacityMax[poolInfo.length] = _max;
+        capacityMax[poolInfo.length] = maxCapacity;
         uint256 lastRewardBlock = block.number > startBlock ? block.number : startBlock;
         totalAllocPoint = totalAllocPoint.add(_allocPoint);
         poolInfo.push(PoolInfo({

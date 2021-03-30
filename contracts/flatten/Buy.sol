@@ -731,7 +731,7 @@ contract Buy is Ownable, ReentrancyGuard {
     
    
    function setRate(uint256 _underWritingRate, uint256 _surplusRate, uint256 _treasuryRate) external onlyOwner {
-       require(_underWritingRate + _surplusRate + _treasuryRate == 100, "not equal 100");
+       require(_underWritingRate.add(_surplusRate).add(_treasuryRate) == 100, "not equal 100");
        underWritingRate = _underWritingRate;
        surplusRate = _surplusRate;
        treasuryRate = _treasuryRate;
