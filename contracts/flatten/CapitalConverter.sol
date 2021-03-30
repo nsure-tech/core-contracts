@@ -1054,6 +1054,8 @@ contract CapitalConverter is ERC20, Ownable, Pausable, ReentrancyGuard {
 
     address public operator;
 
+    mapping (address => uint256) public depositAt; // in case of flashloan attacks
+
     constructor(address _token, uint256 _tokenDecimal,string memory name,string memory symbol) public  ERC20(name,symbol)
     {
         token           = _token;
@@ -1088,6 +1090,8 @@ contract CapitalConverter is ERC20, Ownable, Pausable, ReentrancyGuard {
         require(_amount > 0, "CapitalConverter: Cannot stake 0.");
         require(_amount <= maxConvert, "exceeding the maximum limit");
 
+        depositAt[msg.sender] = block.number;
+
         if (token != ETHEREUM) {
             require(msg.value == 0, "CapitalConverter: Should not allow ETH deposits.");
             IERC20(token).safeTransferFrom(_msgSender(), address(this), _amount);
@@ -1104,8 +1108,11 @@ contract CapitalConverter is ERC20, Ownable, Pausable, ReentrancyGuard {
 
     // withdraw the ETH or USDx
     function exit(uint256 _value) external nonReentrant whenNotPaused {
-        
-        require(balanceOf(_msgSender()) >= _value && _value > 0, "CapitalConverter: insufficient assets");
+        require(balanceOf(_msgSender()) >= _value && _value > 0, 
+                "CapitalConverter: insufficient assets");
+
+        require(depositAt[msg.sender] > 0, "No deposit history");
+        require(depositAt[msg.sender] < block.number, "Reject flashloan");
 
         uint256 value = _value.mul(smartBalance()).div(totalSupply());
         if (token != ETHEREUM) {
