@@ -6,7 +6,7 @@ Nsure is an open insurance platform for Open Finance. The project borrows the id
 
 ## Contract Functions
 
-* Buy.sol is used for policy purchasing, premium will be sent to each pool accordingly to: Treasury.sol(10%，for future claim assessment), Surplus.sol(40%，for claim payout), and LockFunds.sol(50%，reward for underwriters)
+* Buy.sol is used for policy purchasing, premium will be sent to each pool accordingly to: Treasury.sol(10%,for future claim assessment), Surplus.sol(40%,for claim payout), and LockFunds.sol(50%,reward for underwriters)
 * CapitalConverter.sol converts assets into a new token，when a claim is successful the asset is reduced due to payout
 * CapitalStake.sol can stake CapitalConverter.sol token for reward
 * ClaimPurchaseMint.sol is for policy mining rewards
