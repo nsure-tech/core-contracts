@@ -6,6 +6,8 @@ import "@openzeppelin/contracts/cryptography/MerkleProof.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Pausable.sol";
 
+
+
 contract MerkleDistributor is Ownable, Pausable {
     address public  token;
     bytes32 public  merkleRoot;
@@ -30,6 +32,14 @@ contract MerkleDistributor is Ownable, Pausable {
 
     function setNonce(uint256 nonce_) external onlyOwner {
         nonce = nonce_;
+    }
+    
+    function pause() external onlyOwner{
+        _pause();
+    }
+    
+    function unpause()external onlyOwner {
+        _unpause();
     }
 
     function isClaimed(uint256 index) public view returns (bool) {
