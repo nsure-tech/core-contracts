@@ -1385,8 +1385,8 @@ contract Underwriting is Ownable, ReentrancyGuard{
     }
 
     // burn 1/2 for claiming
-    function burnOuts(address[] calldata _burnUsers, uint256[] calldata _amounts) 
-        external onlyOperator 
+    function burnOuts(address[] calldata _burnUsers, uint256[] calldata _amounts,uint256 _product) 
+        external onlyOperator
     {
         require(_burnUsers.length == _amounts.length, "not equal");
 
@@ -1396,7 +1396,7 @@ contract Underwriting is Ownable, ReentrancyGuard{
             _balances[_burnUsers[i]] = _balances[_burnUsers[i]].sub(_amounts[i]);
             Nsure.burn(_amounts[i]);
 
-            emit Burn(_burnUsers[i],_amounts[i]);
+            emit Burn(_burnUsers[i],_amounts[i],_product);
         }
     }
 
@@ -1437,7 +1437,7 @@ contract Underwriting is Ownable, ReentrancyGuard{
     event Deposit(address indexed user, uint256 amount);
     event Withdraw(address indexed user,  uint256 amount,uint256 nonce);
     event Claim(address indexed user,uint256 currency,uint256 amount,uint256 nonce);
-    event Burn(address indexed user,uint256 amount);
+    event Burn(address indexed user,uint256 amount,uint256 product);
     event SetOperator(address indexed operator);
     event SetClaimDuration(uint256 duration);
     event SetSigner(address indexed signer);

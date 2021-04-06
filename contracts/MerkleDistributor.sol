@@ -31,6 +31,8 @@ contract MerkleDistributor is Ownable {
         nonce = nonce_;
     }
 
+    
+
     function isClaimed(uint256 index) public view returns (bool) {
         uint256 claimedWordIndex = index / 256;
         uint256 claimedBitIndex = index % 256;
