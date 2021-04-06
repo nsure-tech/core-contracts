@@ -765,7 +765,11 @@ contract ClaimPurchaseMint is Ownable, ReentrancyGuard{
         }
 
         uint256 nsureReward = nsurePerBlock.mul(block.number.sub(lastRewardBlock));
-        Nsure.mint(address(this), nsureReward);
+
+        // to avoid 0 reward of minting.
+        if(nsureReward > 0) {
+            Nsure.mint(address(this), nsureReward);
+        }
 
         lastRewardBlock = block.number;
     }
@@ -779,10 +783,8 @@ contract ClaimPurchaseMint is Ownable, ReentrancyGuard{
         // mint nsure to address(this) first.
         mintPurchaseNsure();
 
-        bytes32 domainSeparator =   keccak256(abi.encode(DOMAIN_TYPEHASH, keccak256(bytes(name)),
-                                        keccak256(bytes(version)), getChainId(), address(this)));
-        bytes32 structHash =        keccak256(abi.encode(CLAIM_TYPEHASH,address(msg.sender), 
-                                        _amount, nonces[msg.sender]++, deadline));
+        bytes32 domainSeparator =   keccak256(abi.encode(DOMAIN_TYPEHASH, keccak256(bytes(name)), keccak256(bytes(version)), getChainId(), address(this)));
+        bytes32 structHash  =        keccak256(abi.encode(CLAIM_TYPEHASH,address(msg.sender), _amount, nonces[msg.sender]++, deadline));
 
         bytes32 digest      = keccak256(abi.encodePacked("\x19\x01", domainSeparator, structHash));
         address signatory   = ecrecover(digest, v, r, s);
@@ -796,9 +798,6 @@ contract ClaimPurchaseMint is Ownable, ReentrancyGuard{
         Nsure.transfer(msg.sender, _amount);
 
         emit Claim(msg.sender, _amount, nonces[msg.sender]-1);
-      
-
-        
     }
 
     function getChainId() internal pure returns (uint256) {
@@ -813,6 +812,4 @@ contract ClaimPurchaseMint is Ownable, ReentrancyGuard{
     event SetSigner(address indexed signer);
     event SetDeadlineDuration(uint256 duration);
     event UpdateBlockReward(uint256 reward);
- 
-
 }
