@@ -82,7 +82,7 @@ contract Product is Ownable {
     }
 
 
-    function setOperator(address _operator) external onlyOwner {  
+    function setOperator(address _operator) external onlyOwner {
         require(_operator != address(0),"_operator is zero"); 
         operator = _operator;
         emit SetOperator(_operator);

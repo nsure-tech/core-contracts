@@ -4,8 +4,9 @@ pragma solidity >=0.6.11;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/cryptography/MerkleProof.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/utils/Pausable.sol";
 
-contract MerkleDistributor is Ownable {
+contract MerkleDistributor is Ownable, Pausable {
     address public  token;
     bytes32 public  merkleRoot;
     uint256 public nonce;
@@ -31,8 +32,6 @@ contract MerkleDistributor is Ownable {
         nonce = nonce_;
     }
 
-    
-
     function isClaimed(uint256 index) public view returns (bool) {
         uint256 claimedWordIndex = index / 256;
         uint256 claimedBitIndex = index % 256;
@@ -47,7 +46,7 @@ contract MerkleDistributor is Ownable {
         claimedBitMap[nonce][claimedWordIndex] = claimedBitMap[nonce][claimedWordIndex] | (1 << claimedBitIndex);
     }
 
-    function claim(uint256 index, address account, uint256 amount, bytes32[] calldata merkleProof) external {
+    function claim(uint256 index, address account, uint256 amount, bytes32[] calldata merkleProof) external whenNotPaused {
         require(!isClaimed(index), 'MerkleDistributor: Drop already claimed.');
 
         // Verify the merkle proof.
